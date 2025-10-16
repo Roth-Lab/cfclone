@@ -76,24 +76,14 @@ def fit(
 
 
 def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None):
-    def add_bin_name_col(df):
-        df["bin_name"] = df["chrom"].astype(str) + ":" + df["start"].astype(str) + ":" + df["end"].astype(str)
-
-    def add_normal_clone(df):
-        clones = list(df.index)
-        clones.append("normal")
-        bins = df.columns
-        vals = df.values
-        vals = np.row_stack([vals, np.ones(df.shape[1])])
-        return pd.DataFrame(vals, index=clones, columns=bins)
 
     df = pd.read_csv(in_file, sep="\t")
 
-    add_bin_name_col(df)
+    _add_bin_name_col(df)
 
     clone_df = pd.read_csv(clone_cnv_file, sep="\t")
 
-    add_bin_name_col(clone_df)
+    _add_bin_name_col(clone_df)
 
     # Ensure the same set of bins is used and data is aligned
     bins = pd.merge(
@@ -116,9 +106,9 @@ def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None):
     cn_b = clone_df.pivot(index="clone", columns="bin_name", values="cn_b")[bins]
 
     if add_normal:
-        cn_a = add_normal_clone(cn_a)
+        cn_a = _add_normal_clone(cn_a)
 
-        cn_b = add_normal_clone(cn_b)
+        cn_b = _add_normal_clone(cn_b)
 
     cn_t = cn_a + cn_b
 
@@ -139,3 +129,16 @@ def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None):
     }
 
     return bins, clones, data
+
+
+def _add_bin_name_col(df):
+    df["bin_name"] = df["chrom"].astype(str) + ":" + df["start"].astype(str) + ":" + df["end"].astype(str)
+
+
+def _add_normal_clone(df):
+    clones = list(df.index)
+    clones.append("normal")
+    bins = df.columns
+    vals = df.values
+    vals = np.vstack([vals, np.ones(df.shape[1])])
+    return pd.DataFrame(vals, index=clones, columns=bins)
