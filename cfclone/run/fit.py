@@ -47,8 +47,10 @@ def fit(
     )
 
     chains = jl.Chains(pt)
-
     samples_df = jl.PythonCall.pytable(chains)
+    clone_dict = {i+1:clone for i, clone in enumerate(clones)}
+    rho_map = {col:"rho_{}".format(clone_dict[int(col[4:])]) for col in samples_df.columns if col.startswith("rho.")}
+    samples_df.rename(columns=rho_map, inplace=True)
 
     save_to_tsv_compressed(samples_df, out_file)
 
