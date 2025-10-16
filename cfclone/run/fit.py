@@ -8,6 +8,7 @@ import random
 from cfclone.inference import run_inference
 from cfclone.julia import setup_julia_module
 from cfclone.models import get_model
+from .initialise import set_env_variables
 
 
 def fit(
@@ -26,9 +27,10 @@ def fit(
 
     print(clones)
 
-    os.environ["TBB_CXX_TYPE"] = "gcc"
-    os.environ["TBB_INTERFACE_NEW"] = "new"
-    os.environ["STAN_THREADS"] = "true"
+    # os.environ["TBB_CXX_TYPE"] = "gcc"
+    # os.environ["TBB_INTERFACE_NEW"] = "new"
+    # os.environ["STAN_THREADS"] = "true"
+    set_env_variables()
     os.environ["STAN_NUM_THREADS"] = f"{num_threads}"
 
     jl = setup_julia_module()
