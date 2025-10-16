@@ -11,7 +11,7 @@ def run_inference(jl, model, num_chains=12, num_chains_vi=5, num_rounds=10):
             n_chains,
             reference,
             n_rounds,
-            n_chains_variational=5,
+            n_chains_variational=n_chains_variational,
             variational=GaussianReference(first_tuning_round=5)
         )
         return result
