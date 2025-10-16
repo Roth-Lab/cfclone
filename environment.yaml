@@ -1,0 +1,13 @@
+name: cfclone
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.12
+  - click>=8.0
+  - juliaup
+  - numpy
+  - pandas
+  - pip
+  - pip:
+      - juliacall
+      - juliapkg
