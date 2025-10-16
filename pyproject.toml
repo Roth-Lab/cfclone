@@ -19,3 +19,4 @@ exclude = ["sandbox"]
 
 [tool.setuptools.package-data]
 "cfclone.stan" = ["*.stan"]
+"cfclone" = ["*.json"]

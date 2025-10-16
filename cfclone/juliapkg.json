@@ -1,0 +1,29 @@
+{
+    "julia": "1.11.5",
+    "packages": {
+        "ADTypes": {
+            "uuid": "47edcb42-4c32-4615-8424-f2b9edc5f35b"
+        },
+        "Bijectors": {
+            "uuid": "76274a88-744f-5084-9051-94815aaf08c4"
+        },
+        "BridgeStan": {
+            "uuid": "c88b6f0a-829e-4b0b-94b7-f06ab5908f5a"
+        },
+        "Distributions": {
+            "uuid": "31c24e10-a181-5473-b8eb-7969acd0382f"
+        },
+        "DynamicPPL": {
+            "uuid": "366bfd00-2699-11ea-058f-f148b4cae6d8"
+        },
+        "JSON": {
+            "uuid": "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+        },
+        "Pigeons": {
+            "uuid": "0eb8d820-af6a-4919-95ae-11206f830c31"
+        },
+        "ReverseDiff": {
+            "uuid": "37e2e3b7-166d-5795-8a7a-e32c996b4267"
+        }
+    }
+}
