@@ -5,6 +5,7 @@ def run_inference(jl, model, num_chains=12, num_chains_vi=5, num_rounds=10):
         result = pigeons(
             ;
             target,
+            multithreaded = true,
             record=[traces, Pigeons.round_trip, Pigeons.timing_extrema, Pigeons.energy_ac1],
             explorer=AutoMALA(),
             n_chains,
