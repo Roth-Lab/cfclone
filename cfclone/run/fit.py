@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 import random
 
-import cfclone.stan
+from cfclone.inference import run_inference
+from cfclone.julia import setup_julia_module
+from cfclone.models import get_model
 
 
 def fit(
@@ -24,11 +26,22 @@ def fit(
 
     print(clones)
 
+    os.environ["TBB_CXX_TYPE"] = "gcc"
+    os.environ["TBB_INTERFACE_NEW"] = "new"
+    os.environ["STAN_THREADS"] = "true"
+    os.environ["STAN_NUM_THREADS"] = f"{num_threads}"
+
     jl = setup_julia_module()
 
-    reference, target = setup_model(jl, data)
+    model = get_model(jl, data, use_outlier=outlier)
 
-    pt = run_inference(jl, reference, target, num_chains=num_chains, num_chains_vi=num_chains_vi, num_rounds=num_rounds)
+    pt = run_inference(
+        jl,
+        model,
+        num_chains=num_chains,
+        num_chains_vi=num_chains_vi,
+        num_rounds=num_rounds,
+    )
 
     names = [str(x).split(":")[-1] for x in list(jl.sample_names(pt))]
 
@@ -126,115 +139,3 @@ def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None):
     }
 
     return bins, clones, data
-
-
-def setup_julia_module(num_threads=1):
-    os.environ["JULIA_NUM_THREADS"] = f"{num_threads}"
-
-    os.environ["PYTHON_JULIACALL_HANDLE_SIGNALS"] = "yes"
-
-    import juliacall
-
-    jl = juliacall.newmodule("cfClone")
-
-    jl.seval("using ADTypes, Bijectors, BridgeStan, Distributions, DynamicPPL, JSON, Pigeons, ReverseDiff")
-
-    jl.seval(
-        """
-    struct CfCloneDescription
-    end
-    """
-    )
-
-    return jl
-
-
-def setup_model(jl, data, use_outlier=True):
-    stan_dir = importlib.resources.files(cfclone.stan)
-
-    if use_outlier:
-        stan_file = stan_dir.joinpath("cfclone_outlier.stan")
-
-        build_reference = jl.seval(
-            """
-        function build_reference(n_clones)
-            result = []
-            for _ in 1:(n_clones - 1)
-                push!(result, Uniform(0, 1)) # rho
-            end
-            append!(result,
-                    [Distributions.Gamma(1, 1),     # alpha
-                    Distributions.Beta(1, 100),     # non_binomiality
-                    Distributions.Gamma(1, 100),    # sigma
-                    Distributions.Gamma(1, 1),      # sigma_outlier 
-                    Distributions.Gamma(1, 100),    # outlier_rate_rdr
-                    Distributions.Gamma(1, 100)]    # outlier_rate_baf
-            )
-            return DistributionLogPotential(product_distribution(transformed.(result)))
-        end
-        """
-        )
-
-    else:
-        stan_file = stan_dir.joinpath("cfclone.stan")
-
-        build_reference = jl.seval(
-            """
-        function build_reference(n_clones)
-            result = []
-            for _ in 1:(n_clones - 1)
-                push!(result, Uniform(0, 1)) # rho
-            end
-            append!(result,
-                    [Distributions.Gamma(1, 1),     # alpha
-                    Distributions.Beta(1, 100),     # non_binomiality
-                    Distributions.Gamma(1, 100)]    # sigma
-            )
-            return DistributionLogPotential(product_distribution(transformed.(result)))
-        end
-        """
-        )
-
-    build_target = jl.seval(
-        """
-    function build_target(data, stan_model_file)
-        description = CfCloneDescription() 
-        return StanLogPotential(stan_model_file, JSON.json(data), description)
-    end
-    """
-    )
-
-    reference = build_reference(data["num_clones"])
-
-    target = build_target(data, str(stan_file))
-
-    return reference, target
-
-
-def run_inference(jl, reference, target, num_chains=12, num_chains_vi=5, num_rounds=10):
-    infer = jl.seval(
-        """
-    function infer(reference, target, n_chains=12, n_chains_variational=5, n_rounds=10)
-        result = pigeons(
-            ;
-            target,
-            record=[traces, Pigeons.round_trip, Pigeons.timing_extrema, Pigeons.energy_ac1],
-            explorer=AutoMALA(),
-            n_chains,
-            reference,
-            n_rounds,
-            n_chains_variational=5,
-            variational=GaussianReference(first_tuning_round=5)
-        )
-        return result
-    end
-    """
-    )
-
-    return infer(
-        reference,
-        target,
-        num_chains,
-        num_chains_vi,
-        num_rounds,
-    )

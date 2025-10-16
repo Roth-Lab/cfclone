@@ -9,6 +9,7 @@ dependencies:
   - make
   - numpy
   - pandas
+  - tbb-devel
   - pip
   - pip:
       - juliacall
