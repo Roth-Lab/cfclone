@@ -54,10 +54,11 @@ def fit(
 
     save_to_tsv_compressed(samples_df, out_file)
 
-    # out_df = build_out_df(clones, jl, pt)
+    summary_path = Path(out_file).parent.joinpath("pigeons_summary.tsv.gz")
 
-    # out_df.to_csv(out_file, compression="gzip", index=False, sep="\t")
-    # save_to_tsv_compressed(out_df, out_file)
+    summary_df = jl.PythonCall.pytable(pt.shared.reports.summary)
+
+    save_to_tsv_compressed(summary_df, summary_path)
 
 
 def build_out_df(clones, jl, pt):
