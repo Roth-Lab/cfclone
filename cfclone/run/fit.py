@@ -1,5 +1,6 @@
 import importlib.resources
 import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -74,8 +75,14 @@ def fit(
 
     out_df = out_df.rename(columns=rho_map)
 
-    out_df.to_csv(out_file, compression="gzip", index=False, sep="\t")
+    # out_df.to_csv(out_file, compression="gzip", index=False, sep="\t")
+    save_to_tsv_compressed(out_df, out_file)
 
+def save_to_tsv_compressed(df, out_file):
+    out_path = Path(out_file)
+    if out_path.suffix != ".gz":
+        out_file = str(out_path.with_suffix(out_path.suffix + ".gz"))
+    df.to_csv(out_file, index=False, sep="\t")
 
 def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None):
 
