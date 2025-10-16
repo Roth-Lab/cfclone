@@ -10,9 +10,5 @@ dependencies:
   - numpy
   - pandas
   - tbb-devel
-  - pyjuliacall
+  - pyjuliacall>=0.9.22
   - pyjuliapkg
-#  - pip
-#  - pip:
-#      - juliacall
-#      - juliapkg
