@@ -4,7 +4,9 @@ channels:
 dependencies:
   - python>=3.12
   - click>=8.0
+  - cxx-compiler
   - juliaup
+  - make
   - numpy
   - pandas
   - pip
