@@ -2,7 +2,9 @@ import juliapkg
 
 
 def initialise():
-    juliapkg.require_julia("1.11.5")
+    juliapkg.require_julia("1.11.5", ".")
+    juliapkg.resolve()
+
     juliapkg.add("ADTypes")
     juliapkg.add("Bijectors")
     juliapkg.add("BridgeStan")
