@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-import importlib
+import importlib.resources
 
 import cfclone.stan
 

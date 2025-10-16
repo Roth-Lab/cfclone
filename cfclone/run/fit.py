@@ -1,4 +1,4 @@
-import importlib.resources
+# import importlib.resources
 import os
 from pathlib import Path
 
@@ -46,12 +46,22 @@ def fit(
         num_rounds=num_rounds,
     )
 
+    chains = jl.Chains(pt)
+
+    samples_df = jl.PythonCall.pytable(chains)
+
+    save_to_tsv_compressed(samples_df, out_file)
+
+    # out_df = build_out_df(clones, jl, pt)
+
+    # out_df.to_csv(out_file, compression="gzip", index=False, sep="\t")
+    # save_to_tsv_compressed(out_df, out_file)
+
+
+def build_out_df(clones, jl, pt):
     names = [str(x).split(":")[-1] for x in list(jl.sample_names(pt))]
-
     results = jl.sample_array(pt).to_numpy()
-
     out_df = []
-
     for i in range(results.shape[2]):
         chain_results = results[:, :, i]
 
@@ -60,11 +70,8 @@ def fit(
         chain_df.insert(0, "chain", i)
 
         out_df.append(chain_df)
-
     out_df = pd.concat(out_df)
-
     rho_map = {}
-
     for col in out_df.columns:
         if col.startswith("rho"):
             i = int(col.split(".")[1]) - 1
@@ -72,11 +79,9 @@ def fit(
             clone = clones[i]
 
             rho_map[col] = "rho_{}".format(clone)
-
     out_df = out_df.rename(columns=rho_map)
+    return out_df
 
-    # out_df.to_csv(out_file, compression="gzip", index=False, sep="\t")
-    save_to_tsv_compressed(out_df, out_file)
 
 def save_to_tsv_compressed(df, out_file):
     out_path = Path(out_file)
