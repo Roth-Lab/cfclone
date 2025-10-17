@@ -1,9 +1,9 @@
 import os
-from pathlib import Path
+import random
 
+import h5py
 import numpy as np
 import pandas as pd
-import random
 
 from cfclone.inference import run_inference
 from cfclone.julia import setup_julia_module
@@ -46,18 +46,41 @@ def fit(
     )
 
     chains = jl.Chains(pt)
+
     samples_df = jl.PythonCall.pytable(chains)
+
     clone_dict = {i + 1: clone for i, clone in enumerate(clones)}
+
     rho_map = {col: "rho_{}".format(clone_dict[int(col[4:])]) for col in samples_df.columns if col.startswith("rho.")}
+
     samples_df.rename(columns=rho_map, inplace=True)
-
-    save_to_tsv_compressed(samples_df, out_file)
-
-    summary_path = Path(out_file).parent.joinpath("pigeons_summary.tsv.gz")
 
     summary_df = jl.PythonCall.pytable(pt.shared.reports.summary)
 
-    save_to_tsv_compressed(summary_df, summary_path)
+    summary_df = summary_df.drop("last_round_max_allocation", axis=1)
+
+    summary_df = summary_df.astype(np.float64)
+
+    with h5py.File(out_file, "w") as fh:
+        fh.create_dataset("/data/bins", data=bins, dtype=h5py.string_dtype(encoding="utf-8"))
+
+        fh.create_dataset("/data/cells", data=[str(x) for x in clones], dtype=h5py.string_dtype(encoding="utf-8"))
+
+        dset = fh.create_dataset("/data/cn_a", data=data["cn_a"], dtype=np.int32)
+
+        dset = fh.create_dataset("/data/cn_t", data=data["cn_t"], dtype=np.int32)
+
+        dset = fh.create_dataset("/data/a", data=data["a"], dtype=np.int32)
+
+        dset = fh.create_dataset("/data/d", data=data["d"], dtype=np.int32)
+
+        dset = fh.create_dataset("/data/rdr", data=data["rdr"], dtype=np.float64)
+
+        dset = fh.create_dataset("/results/samples", data=samples_df.values, dtype=np.float64)
+        dset.attrs["columns"] = [str(x) for x in samples_df.columns]
+
+        dset = fh.create_dataset("/results/summary", data=summary_df.values, dtype=np.float64)
+        dset.attrs["columns"] = [str(x) for x in summary_df.columns]
 
 
 def build_out_df(clones, jl, pt):
@@ -83,13 +106,6 @@ def build_out_df(clones, jl, pt):
             rho_map[col] = "rho_{}".format(clone)
     out_df = out_df.rename(columns=rho_map)
     return out_df
-
-
-def save_to_tsv_compressed(df, out_file):
-    out_path = Path(out_file)
-    if out_path.suffix != ".gz":
-        out_file = str(out_path.with_suffix(out_path.suffix + ".gz"))
-    df.to_csv(out_file, index=False, sep="\t")
 
 
 def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None):

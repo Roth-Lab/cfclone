@@ -5,6 +5,7 @@ dependencies:
   - python>=3.12
   - click>=8.0
   - cxx-compiler
+  - h5py
   - juliaup
   - make
   - numpy
