@@ -59,7 +59,7 @@ import cfclone.run
 )
 @click.option(
     "--num-chains-vi",
-    default=5,
+    default=12,
     show_default=True,
     type=click.IntRange(1),
     help="""Number of chains for the variational reference.""",
