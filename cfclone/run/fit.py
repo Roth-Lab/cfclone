@@ -107,7 +107,7 @@ def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None):
         df[["bin_name"]].drop_duplicates(), clone_df[["bin_name"]].drop_duplicates(), on="bin_name", how="inner"
     )["bin_name"]
 
-    if num_bins is not None:
+    if num_bins is not None and num_bins <= len(bins):
         bins = random.sample(list(bins), num_bins)
 
     a = df.set_index("bin_name").loc[bins, "a"]
