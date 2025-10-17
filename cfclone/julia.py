@@ -8,7 +8,9 @@ def setup_julia_module():
 
     jl = juliacall.newmodule("cfClone")
 
-    jl.seval("using ADTypes, Bijectors, BridgeStan, Distributions, DynamicPPL, JSON, Pigeons, ReverseDiff, MCMCChains, PythonCall")
+    jl.seval(
+        "using ADTypes, Bijectors, BridgeStan, Distributions, DynamicPPL, JSON, Pigeons, ReverseDiff, MCMCChains, PythonCall"
+    )
 
     jl.seval(
         """

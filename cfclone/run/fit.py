@@ -1,4 +1,3 @@
-# import importlib.resources
 import os
 from pathlib import Path
 
@@ -48,8 +47,8 @@ def fit(
 
     chains = jl.Chains(pt)
     samples_df = jl.PythonCall.pytable(chains)
-    clone_dict = {i+1:clone for i, clone in enumerate(clones)}
-    rho_map = {col:"rho_{}".format(clone_dict[int(col[4:])]) for col in samples_df.columns if col.startswith("rho.")}
+    clone_dict = {i + 1: clone for i, clone in enumerate(clones)}
+    rho_map = {col: "rho_{}".format(clone_dict[int(col[4:])]) for col in samples_df.columns if col.startswith("rho.")}
     samples_df.rename(columns=rho_map, inplace=True)
 
     save_to_tsv_compressed(samples_df, out_file)
@@ -91,6 +90,7 @@ def save_to_tsv_compressed(df, out_file):
     if out_path.suffix != ".gz":
         out_file = str(out_path.with_suffix(out_path.suffix + ".gz"))
     df.to_csv(out_file, index=False, sep="\t")
+
 
 def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None):
 

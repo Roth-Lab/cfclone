@@ -11,19 +11,6 @@ from cfclone.models import get_model
 def initialise():
     set_env_variables()
 
-    # juliapkg.require_julia("1.11.5", ".")
-    # juliapkg.resolve()
-    #
-    # juliapkg.add("ADTypes")
-    # juliapkg.add("Bijectors")
-    # juliapkg.add("BridgeStan")
-    # juliapkg.add("Distributions")
-    # juliapkg.add("DynamicPPL")
-    # juliapkg.add("JSON")
-    # juliapkg.add("Pigeons")
-    # juliapkg.add("ReverseDiff")
-    # juliapkg.resolve()
-
     data = _get_toy_data()
 
     jl = setup_julia_module()

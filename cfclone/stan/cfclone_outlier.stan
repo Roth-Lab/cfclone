@@ -71,8 +71,8 @@ model {
 generated quantities {
   vector[num_bins] mu;
   vector[num_bins] p;
-
+  
   mu = (cn_t * rho) / dot_product(mean_clone_cn, rho);
-
+  
   p = (cn_a * rho) ./ (cn_t * rho);
 }
