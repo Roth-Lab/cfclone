@@ -142,10 +142,19 @@ def _build_dominance_df(df):
     return new_df
 
 
+# def write_prevalence_samples(in_file, out_file):
+#     _, samples_df, _ = _load_results(in_file)
+#
+#     out_df = samples_df[[x for x in samples_df.columns if "rho" in x]]
+#
+#     out_df = out_df.rename(columns=lambda x: x.replace("rho", "clone"))
+#
+#     out_df.to_csv(out_file, index=False, sep="\t")
+
 def write_prevalence_samples(in_file, out_file):
     _, samples_df, _ = _load_results(in_file)
 
-    out_df = samples_df[[x for x in samples_df.columns if "rho" in x]]
+    out_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=True, renormalise=False)
 
     out_df = out_df.rename(columns=lambda x: x.replace("rho", "clone"))
 
