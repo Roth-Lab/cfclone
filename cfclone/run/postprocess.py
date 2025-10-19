@@ -69,10 +69,34 @@ def write_prevalence_stats(in_file, out_file, hdi_prob=0.95, normal=False, renor
     out_df.to_csv(out_file, sep="\t")
 
 
-def write_samples(in_file, out_file):
-    _, samples_df, _ = _load_results(in_file)
+def write_samples(in_file, out_file, compute_generated_quantities=True):
+    data, samples_df, _ = _load_results(in_file)
+
+    if compute_generated_quantities:
+        samples_df = _create_mu_and_p_cols(data, samples_df)
 
     samples_df.to_csv(out_file, index=False, sep="\t")
+
+
+def _create_mu_and_p_cols(data, samples_df):
+    cn_t = data["cn_t"]
+    cn_a = data["cn_a"]
+    _, rho = _load_rho(data, samples_df, normal=True, renormalise=False)
+    rho = rho[..., np.newaxis]
+    num_bins = cn_t.shape[1]
+    num_sample_draws = rho.shape[0]
+    mean_clone_cn = np.mean(cn_t, axis=1)
+    mu_arr = np.empty((num_sample_draws, num_bins))
+    p_arr = np.empty((num_sample_draws, num_bins))
+    for i in range(num_sample_draws):
+        rho_draw = rho[i]
+        cn_t_by_rho = (cn_t * rho_draw)
+        (cn_t_by_rho / np.dot(mean_clone_cn, rho_draw)).sum(axis=0, out=mu_arr[i])
+        ((cn_a * rho_draw) / cn_t_by_rho).sum(axis=0, out=p_arr[i])
+    mu_df = pd.DataFrame(mu_arr, columns=["mu.{}".format(i) for i in range(1, num_bins + 1)])
+    p_df = pd.DataFrame(p_arr, columns=["p.{}".format(i) for i in range(1, num_bins + 1)])
+    samples_df = samples_df.join([mu_df, p_df])
+    return samples_df
 
 
 def write_tumour_content(in_file, out_file, hdi_prob=0.95):

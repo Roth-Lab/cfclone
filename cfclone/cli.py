@@ -218,6 +218,11 @@ def write_prevalence_stats(**kwargs):
     type=click.Path(resolve_path=True),
     help="""Path where results will be written in TSV format.""",
 )
+@click.option(
+    "--compute-generated-quantities/--no-generated-quantities",
+    default=True,
+    help="""Whether to compute and output model generated quantities (e.g. mu and p).""",
+)
 def write_samples(**kwargs):
     """Write the trace of all model parameters."""
     cfclone.run.write_samples(**kwargs)
@@ -249,7 +254,7 @@ def write_tumour_content(**kwargs):
     cfclone.run.write_tumour_content(**kwargs)
 
 
-@click.group(name="cfclone")
+@click.group(name="cfclone", context_settings={"max_content_width": 140})
 def main():
     pass
 
