@@ -158,22 +158,40 @@ def _create_mu_and_p_cols(data, samples_df):
     return samples_df
 
 
+# def write_tumour_content(in_file, out_file, hdi_prob=0.95):
+#     data, samples_df, _ = _load_results(in_file)
+#
+#     clones, rho = _load_rho(data, samples_df, normal=True, renormalise=False)
+#
+#     rho = pd.DataFrame(rho, columns=clones)
+#
+#     rho = rho[["normal"]]
+#
+#     tc = (1 - rho[["normal"]]).values
+#
+#     hdi = arviz.hdi(tc.reshape((1, tc.shape[0], tc.shape[1])), hdi_prob=hdi_prob)
+#
+#     out_df = np.column_stack([np.mean(tc, axis=0), np.median(tc, axis=0), hdi])
+#
+#     out_df = pd.DataFrame(out_df, columns=["mean", "median", "lower_ci", "upper_ci"])
+#
+#     out_df.to_csv(out_file, index=False, sep="\t")
+
 def write_tumour_content(in_file, out_file, hdi_prob=0.95):
     data, samples_df, _ = _load_results(in_file)
 
-    clones, rho = _load_rho(data, samples_df, normal=True, renormalise=False)
+    rho_df, _ = _build_rho_wide_df(keep_normal=True, renormalise=False, samples_df=samples_df)
 
-    rho = pd.DataFrame(rho, columns=clones)
+    rho_df["tumour_content"] = 1 - rho_df[["rho_normal"]]
 
-    rho = rho[["normal"]]
+    hdi = arviz.hdi(rho_df["tumour_content"].to_numpy(), hdi_prob=hdi_prob)
 
-    tc = (1 - rho[["normal"]]).values
+    out_record = {"mean": rho_df["tumour_content"].mean(),
+                  "median": rho_df["tumour_content"].median(),
+                  "lower_ci": hdi[0],
+                  "upper_ci": hdi[1]}
 
-    hdi = arviz.hdi(tc.reshape((1, tc.shape[0], tc.shape[1])), hdi_prob=hdi_prob)
-
-    out_df = np.column_stack([np.mean(tc, axis=0), np.median(tc, axis=0), hdi])
-
-    out_df = pd.DataFrame(out_df, columns=["mean", "median", "lower_ci", "upper_ci"])
+    out_df = pd.DataFrame([out_record])
 
     out_df.to_csv(out_file, index=False, sep="\t")
 
