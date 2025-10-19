@@ -13,7 +13,14 @@ def write_dominance_prob(in_file, out_file, normal=False):
 
     rho_df["max_rho"] = rho_df[rho_cols].max(axis=1)
 
-    rho_df = pd.wide_to_long(rho_df, stubnames="rho", sep="_", i=["iteration", "chain"], j="clone_id", suffix='(\\d+|normal)',)
+    rho_df = pd.wide_to_long(
+        rho_df,
+        stubnames="rho",
+        sep="_",
+        i=["iteration", "chain"],
+        j="clone_id",
+        suffix="(\\d+|normal)",
+    )
 
     rho_df.reset_index(inplace=True)
 
@@ -24,6 +31,7 @@ def write_dominance_prob(in_file, out_file, normal=False):
     prob_dom.rename(columns={"is_max": "dominance_prob"}, inplace=True)
 
     prob_dom.to_csv(out_file, sep="\t")
+
 
 # def write_dominance_prob(in_file, out_file, normal=False):
 #     data, samples_df, _ = _load_results(in_file)
@@ -61,6 +69,7 @@ def write_dominance_prob(in_file, out_file, normal=False):
 #
 #     post_df.to_csv(out_file, sep="\t")
 
+
 def write_pairwise_ranks(in_file, out_file, normal=False):
     data, samples_df, _ = _load_results(in_file)
 
@@ -85,7 +94,14 @@ def _build_rho_long_df(samples_df, keep_normal, renormalise):
 
     df, rho_cols = _build_rho_wide_df(samples_df, keep_normal, renormalise)
 
-    df = pd.wide_to_long(df, stubnames="rho", sep="_", i=["iteration", "chain"], j="clone_id", suffix='(\\d+|normal)')
+    df = pd.wide_to_long(
+        df,
+        stubnames="rho",
+        sep="_",
+        i=["iteration", "chain"],
+        j="clone_id",
+        suffix="(\\d+|normal)",
+    )
 
     df.reset_index(inplace=True)
 
@@ -175,7 +191,7 @@ def _create_mu_and_p_cols(data, samples_df):
     p_arr = np.empty((num_sample_draws, num_bins))
     for i in range(num_sample_draws):
         rho_draw = rho[i]
-        cn_t_by_rho = (cn_t * rho_draw)
+        cn_t_by_rho = cn_t * rho_draw
         (cn_t_by_rho / np.dot(mean_clone_cn, rho_draw)).sum(axis=0, out=mu_arr[i])
         ((cn_a * rho_draw) / cn_t_by_rho).sum(axis=0, out=p_arr[i])
     mu_df = pd.DataFrame(mu_arr, columns=["mu.{}".format(i) for i in range(1, num_bins + 1)])
@@ -203,6 +219,7 @@ def _create_mu_and_p_cols(data, samples_df):
 #
 #     out_df.to_csv(out_file, index=False, sep="\t")
 
+
 def write_tumour_content(in_file, out_file, hdi_prob=0.95):
     data, samples_df, _ = _load_results(in_file)
 
@@ -212,10 +229,12 @@ def write_tumour_content(in_file, out_file, hdi_prob=0.95):
 
     hdi = arviz.hdi(rho_df["tumour_content"].to_numpy(), hdi_prob=hdi_prob)
 
-    out_record = {"mean": rho_df["tumour_content"].mean(),
-                  "median": rho_df["tumour_content"].median(),
-                  "lower_ci": hdi[0],
-                  "upper_ci": hdi[1]}
+    out_record = {
+        "mean": rho_df["tumour_content"].mean(),
+        "median": rho_df["tumour_content"].median(),
+        "lower_ci": hdi[0],
+        "upper_ci": hdi[1],
+    }
 
     out_df = pd.DataFrame([out_record])
 
