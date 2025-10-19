@@ -57,28 +57,29 @@ def write_pairwise_ranks(in_file, out_file, normal=False):
 
 def _build_rho_long_df(samples_df, keep_normal, renormalise):
 
-    if not keep_normal:
-        df = samples_df.drop(columns="rho_normal", errors="ignore")
-    else:
-        df = samples_df
-
-    rho_cols = [col for col in df.columns if col.startswith("rho")]
-
-    if renormalise:
-        df["rho_sum"] = df[rho_cols].sum(axis=1)
-        df[rho_cols] = df[rho_cols].div(df["rho_sum"], axis=0)
-        df = df.drop(columns="rho_sum")
-
-    cols_to_keep = ["iteration", "chain"]
-    cols_to_keep.extend(rho_cols)
-
-    df = df[cols_to_keep]
+    df, rho_cols = _build_rho_wide_df(keep_normal, renormalise, samples_df)
 
     df = pd.wide_to_long(df, stubnames="rho", sep="_", i=["iteration", "chain"], j="clone_id", suffix='(\\d+|normal)')
 
     df.reset_index(inplace=True)
 
     return df
+
+
+def _build_rho_wide_df(keep_normal, renormalise, samples_df):
+    if not keep_normal:
+        df = samples_df.drop(columns="rho_normal", errors="ignore")
+    else:
+        df = samples_df
+    rho_cols = [col for col in df.columns if col.startswith("rho")]
+    if renormalise:
+        df["rho_sum"] = df[rho_cols].sum(axis=1)
+        df[rho_cols] = df[rho_cols].div(df["rho_sum"], axis=0)
+        df = df.drop(columns="rho_sum")
+    cols_to_keep = ["iteration", "chain"]
+    cols_to_keep.extend(rho_cols)
+    df = df[cols_to_keep]
+    return df, rho_cols
 
 
 def _build_dominance_df(df):
