@@ -8,7 +8,7 @@ import pandas as pd
 from cfclone.inference import run_inference
 from cfclone.julia import setup_julia_module
 from cfclone.models import get_model
-from .initialise import set_env_variables
+from cfclone.run.initialise import set_env_variables
 
 
 def fit(
@@ -21,9 +21,18 @@ def fit(
     num_chains_vi=5,
     num_rounds=10,
     num_threads=1,
+    only_normal=False,
     outlier=False,
+    use_clone=(),
 ):
-    bins, clones, data = load_data(clone_cnv_file, in_file, add_normal=add_normal, num_bins=num_bins)
+    bins, clones, data = load_data(
+        clone_cnv_file,
+        in_file,
+        add_normal=add_normal,
+        num_bins=num_bins,
+        only_normal=only_normal,
+        use_clone=use_clone,
+    )
 
     print(clones)
 
@@ -64,7 +73,7 @@ def fit(
     with h5py.File(out_file, "w") as fh:
         fh.create_dataset("/data/bins", data=bins, dtype=h5py.string_dtype(encoding="utf-8"))
 
-        fh.create_dataset("/data/cells", data=[str(x) for x in clones], dtype=h5py.string_dtype(encoding="utf-8"))
+        fh.create_dataset("/data/clones", data=[str(x) for x in clones], dtype=h5py.string_dtype(encoding="utf-8"))
 
         dset = fh.create_dataset("/data/cn_a", data=data["cn_a"], dtype=np.int32)
 
@@ -83,38 +92,13 @@ def fit(
         dset.attrs["columns"] = [str(x) for x in summary_df.columns]
 
 
-def build_out_df(clones, jl, pt):
-    names = [str(x).split(":")[-1] for x in list(jl.sample_names(pt))]
-    results = jl.sample_array(pt).to_numpy()
-    out_df = []
-    for i in range(results.shape[2]):
-        chain_results = results[:, :, i]
-
-        chain_df = pd.DataFrame(chain_results, columns=names)
-
-        chain_df.insert(0, "chain", i)
-
-        out_df.append(chain_df)
-    out_df = pd.concat(out_df)
-    rho_map = {}
-    for col in out_df.columns:
-        if col.startswith("rho"):
-            i = int(col.split(".")[1]) - 1
-
-            clone = clones[i]
-
-            rho_map[col] = "rho_{}".format(clone)
-    out_df = out_df.rename(columns=rho_map)
-    return out_df
-
-
-def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None):
-
+def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None, only_normal=False, use_clone=()):
     df = pd.read_csv(in_file, sep="\t")
+    print(use_clone)
 
     _add_bin_name_col(df)
 
-    clone_df = pd.read_csv(clone_cnv_file, sep="\t")
+    clone_df = pd.read_csv(clone_cnv_file, converters={"clone": str}, sep="\t")
 
     _add_bin_name_col(clone_df)
 
@@ -138,10 +122,20 @@ def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None):
 
     cn_b = clone_df.pivot(index="clone", columns="bin_name", values="cn_b")[bins]
 
+    if len(use_clone) > 0:
+        cn_a = cn_a.loc[[x for x in use_clone]]
+
+        cn_b = cn_b.loc[[x for x in use_clone]]
+
     if add_normal:
         cn_a = _add_normal_clone(cn_a)
 
         cn_b = _add_normal_clone(cn_b)
+
+    if only_normal:
+        cn_a = cn_a.loc[["normal"]]
+
+        cn_b = cn_b.loc[["normal"]]
 
     cn_t = cn_a + cn_b
 
