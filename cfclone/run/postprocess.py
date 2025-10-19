@@ -57,7 +57,7 @@ def write_pairwise_ranks(in_file, out_file, normal=False):
 
 def _build_rho_long_df(samples_df, keep_normal, renormalise):
 
-    df, rho_cols = _build_rho_wide_df(keep_normal, renormalise, samples_df)
+    df, rho_cols = _build_rho_wide_df(samples_df, keep_normal, renormalise)
 
     df = pd.wide_to_long(df, stubnames="rho", sep="_", i=["iteration", "chain"], j="clone_id", suffix='(\\d+|normal)')
 
@@ -66,7 +66,7 @@ def _build_rho_long_df(samples_df, keep_normal, renormalise):
     return df
 
 
-def _build_rho_wide_df(keep_normal, renormalise, samples_df):
+def _build_rho_wide_df(samples_df, keep_normal, renormalise):
     if not keep_normal:
         df = samples_df.drop(columns="rho_normal", errors="ignore")
     else:
@@ -78,7 +78,7 @@ def _build_rho_wide_df(keep_normal, renormalise, samples_df):
         df = df.drop(columns="rho_sum")
     cols_to_keep = ["iteration", "chain"]
     cols_to_keep.extend(rho_cols)
-    df = df[cols_to_keep]
+    df = df[cols_to_keep].copy()
     return df, rho_cols
 
 
@@ -180,7 +180,7 @@ def _create_mu_and_p_cols(data, samples_df):
 def write_tumour_content(in_file, out_file, hdi_prob=0.95):
     data, samples_df, _ = _load_results(in_file)
 
-    rho_df, _ = _build_rho_wide_df(keep_normal=True, renormalise=False, samples_df=samples_df)
+    rho_df, _ = _build_rho_wide_df(samples_df, keep_normal=True, renormalise=False)
 
     rho_df["tumour_content"] = 1 - rho_df[["rho_normal"]]
 
