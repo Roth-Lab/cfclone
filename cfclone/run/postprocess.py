@@ -182,7 +182,8 @@ def write_samples(in_file, out_file, compute_generated_quantities=True):
 def _create_mu_and_p_cols(data, samples_df):
     cn_t = data["cn_t"]
     cn_a = data["cn_a"]
-    _, rho = _load_rho(data, samples_df, normal=True, renormalise=False)
+    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=True, renormalise=False)
+    rho = rho_df[rho_cols].to_numpy()
     rho = rho[..., np.newaxis]
     num_bins = cn_t.shape[1]
     num_sample_draws = rho.shape[0]
