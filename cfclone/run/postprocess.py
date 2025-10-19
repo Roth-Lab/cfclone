@@ -20,25 +20,83 @@ def write_dominance_prob(in_file, out_file, normal=False):
     prob_dom.to_csv(out_file, sep="\t")
 
 
+# def write_pairwise_ranks(in_file, out_file, normal=False):
+#     data, samples_df, _ = _load_results(in_file)
+#
+#     clones, rho = _load_rho(data, samples_df, normal=normal)
+#
+#     num_scans, num_clones = rho.shape
+#
+#     post_mat = np.zeros((num_clones, num_clones))
+#
+#     for t in range(num_scans):
+#         for i in range(num_clones):
+#             for j in range(num_clones):
+#                 post_mat[i, j] += rho[t, i] >= rho[t, j]
+#
+#     post_mat /= num_scans
+#
+#     post_df = pd.DataFrame(post_mat, columns=clones, index=clones)
+#
+#     post_df.to_csv(out_file, sep="\t")
+
 def write_pairwise_ranks(in_file, out_file, normal=False):
     data, samples_df, _ = _load_results(in_file)
 
-    clones, rho = _load_rho(data, samples_df, normal=normal)
+    if normal:
+        renormalise = False
+    else:
+        renormalise = True
 
-    num_scans, num_clones = rho.shape
+    rho_df = _build_rho_long_df(samples_df, normal, renormalise)
 
-    post_mat = np.zeros((num_clones, num_clones))
-
-    for t in range(num_scans):
-        for i in range(num_clones):
-            for j in range(num_clones):
-                post_mat[i, j] += rho[t, i] >= rho[t, j]
-
-    post_mat /= num_scans
-
-    post_df = pd.DataFrame(post_mat, columns=clones, index=clones)
+    post_df = _build_dominance_df(rho_df)
 
     post_df.to_csv(out_file, sep="\t")
+
+
+def _build_rho_long_df(samples_df, keep_normal, renormalise):
+
+    if not keep_normal:
+        df = samples_df.drop(columns="rho_normal", errors="ignore")
+    else:
+        df = samples_df
+
+    rho_cols = [col for col in df.columns if col.startswith("rho")]
+
+    if renormalise:
+        df["rho_sum"] = df[rho_cols].sum(axis=1)
+        df[rho_cols] = df[rho_cols].div(df["rho_sum"], axis=0)
+        df = df.drop(columns="rho_sum")
+
+    cols_to_keep = ["iteration", "chain"]
+    cols_to_keep.extend(rho_cols)
+
+    df = df[cols_to_keep]
+
+    df = pd.wide_to_long(df, stubnames="rho", sep="_", i=["iteration", "chain"], j="clone_id", suffix='(\\d+|normal)')
+
+    df.reset_index(inplace=True)
+
+    return df
+
+
+def _build_dominance_df(df):
+    df = df[["iteration", "chain", "clone_id", "rho"]]
+    df = df.set_index(["iteration", "chain"])
+    clonal_grouped = df.groupby("clone_id", sort=False)
+    new_df = []
+    for i_name, i_group in clonal_grouped:
+        i_records = {"clone_id": i_name}
+        total_len = len(i_group)
+        for j_name, j_group in clonal_grouped:
+            diff_df = i_group["rho"] > j_group["rho"]
+            diff_val = diff_df.sum() / total_len
+            i_records[j_name] = diff_val
+        new_df.append(i_records)
+    new_df = pd.DataFrame(new_df)
+    new_df = new_df.set_index("clone_id")
+    return new_df
 
 
 def write_prevalence_samples(in_file, out_file):
