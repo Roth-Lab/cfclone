@@ -7,17 +7,38 @@ import pandas as pd
 def write_dominance_prob(in_file, out_file, normal=False):
     data, samples_df, _ = _load_results(in_file)
 
-    clones, rho = _load_rho(data, samples_df, normal=normal)
+    renormalise = _should_renormalise(normal)
 
-    num_scans, num_clones = rho.shape
+    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=normal, renormalise=renormalise)
 
-    post_mat = np.zeros((num_clones, num_clones))
+    rho_df["max_rho"] = rho_df[rho_cols].max(axis=1)
 
-    prob_dom = (rho == rho.max(axis=1)[:, np.newaxis]).mean(axis=0)
+    rho_df = pd.wide_to_long(rho_df, stubnames="rho", sep="_", i=["iteration", "chain"], j="clone_id", suffix='(\\d+|normal)',)
 
-    prob_dom = pd.Series(prob_dom, index=clones)
+    rho_df.reset_index(inplace=True)
+
+    rho_df["is_max"] = rho_df["rho"] == rho_df["max_rho"]
+
+    prob_dom = rho_df.groupby("clone_id", sort=False)["is_max"].mean()
+    prob_dom = prob_dom.reset_index()
+    prob_dom.rename(columns={"is_max": "dominance_prob"}, inplace=True)
 
     prob_dom.to_csv(out_file, sep="\t")
+
+# def write_dominance_prob(in_file, out_file, normal=False):
+#     data, samples_df, _ = _load_results(in_file)
+#
+#     clones, rho = _load_rho(data, samples_df, normal=normal)
+#
+#     num_scans, num_clones = rho.shape
+#
+#     post_mat = np.zeros((num_clones, num_clones))
+#
+#     prob_dom = (rho == rho.max(axis=1)[:, np.newaxis]).mean(axis=0)
+#
+#     prob_dom = pd.Series(prob_dom, index=clones)
+#
+#     prob_dom.to_csv(out_file, sep="\t")
 
 
 # def write_pairwise_ranks(in_file, out_file, normal=False):
@@ -43,16 +64,21 @@ def write_dominance_prob(in_file, out_file, normal=False):
 def write_pairwise_ranks(in_file, out_file, normal=False):
     data, samples_df, _ = _load_results(in_file)
 
-    if normal:
-        renormalise = False
-    else:
-        renormalise = True
+    renormalise = _should_renormalise(normal)
 
     rho_df = _build_rho_long_df(samples_df, normal, renormalise)
 
     post_df = _build_dominance_df(rho_df)
 
     post_df.to_csv(out_file, sep="\t")
+
+
+def _should_renormalise(normal):
+    if normal:
+        renormalise = False
+    else:
+        renormalise = True
+    return renormalise
 
 
 def _build_rho_long_df(samples_df, keep_normal, renormalise):
