@@ -147,11 +147,7 @@ def _load_df(fh, key):
 
     cols = fh[key].attrs["columns"]
 
-    df = pd.DataFrame(vals, columns=cols)
-
-    df = df.convert_dtypes()
-
-    return df
+    return pd.DataFrame(vals, columns=cols)
 
 
 def _load_rho(data, samples_df, normal=False, renormalise=True):
