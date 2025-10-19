@@ -151,6 +151,7 @@ def _build_dominance_df(df):
 #
 #     out_df.to_csv(out_file, index=False, sep="\t")
 
+
 def write_prevalence_samples(in_file, out_file):
     _, samples_df, _ = _load_results(in_file)
 
@@ -161,20 +162,46 @@ def write_prevalence_samples(in_file, out_file):
     out_df.to_csv(out_file, index=False, sep="\t")
 
 
+# def write_prevalence_stats(in_file, out_file, hdi_prob=0.95, normal=False, renormalise=True):
+#     data, samples_df, _ = _load_results(in_file)
+#
+#     clones, rho = _load_rho(data, samples_df, normal=normal, renormalise=renormalise)
+#
+#     hdi = arviz.hdi(rho.reshape((1, rho.shape[0], rho.shape[1])), hdi_prob=hdi_prob)
+#
+#     out_df = np.column_stack([np.mean(rho, axis=0), np.median(rho, axis=0), hdi])
+#
+#     out_df = pd.DataFrame(
+#         out_df, columns=["mean_prevalence", "median_prevalence", "lower_ci", "upper_ci"], index=clones
+#     )
+#
+#     out_df.index.name = "clone"
+#
+#     out_df.to_csv(out_file, sep="\t")
+
+
 def write_prevalence_stats(in_file, out_file, hdi_prob=0.95, normal=False, renormalise=True):
     data, samples_df, _ = _load_results(in_file)
 
-    clones, rho = _load_rho(data, samples_df, normal=normal, renormalise=renormalise)
+    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=normal, renormalise=renormalise)
+
+    rho = rho_df[rho_cols].to_numpy()
 
     hdi = arviz.hdi(rho.reshape((1, rho.shape[0], rho.shape[1])), hdi_prob=hdi_prob)
 
-    out_df = np.column_stack([np.mean(rho, axis=0), np.median(rho, axis=0), hdi])
+    out_record = {
+        "mean_prevalence": rho_df[rho_cols].mean(axis=0),
+        "median_prevalence": rho_df[rho_cols].median(axis=0),
+        "lower_ci": hdi[:, 0],
+        "upper_ci": hdi[:, 1],
+    }
 
-    out_df = pd.DataFrame(
-        out_df, columns=["mean_prevalence", "median_prevalence", "lower_ci", "upper_ci"], index=clones
+    out_df = pd.DataFrame.from_records(
+        out_record,
+        columns=["mean_prevalence", "median_prevalence", "lower_ci", "upper_ci"],
     )
-
-    out_df.index.name = "clone"
+    out_df.index = out_df.index.str.removeprefix("rho_")
+    out_df.index.name = "clone_id"
 
     out_df.to_csv(out_file, sep="\t")
 
@@ -255,7 +282,7 @@ def _load_results(file_name):
     data = {}
 
     with h5py.File(file_name) as fh:
-        samples_df = _load_df(fh, "/results/samples")
+        samples_df = _load_df(fh, "/results/samples", downcast=True)
 
         summary_df = _load_df(fh, "/results/summary")
 
@@ -274,12 +301,17 @@ def _load_results(file_name):
     return data, samples_df, summary_df
 
 
-def _load_df(fh, key):
+def _load_df(fh, key, downcast=False):
     vals = fh[key][()]
 
     cols = fh[key].attrs["columns"]
 
-    return pd.DataFrame(vals, columns=cols)
+    df = pd.DataFrame(vals, columns=cols)
+
+    if downcast:
+        df[["iteration", "chain"]] = df[["iteration", "chain"]].apply(pd.to_numeric, downcast="integer")
+
+    return df
 
 
 def _load_rho(data, samples_df, normal=False, renormalise=True):
