@@ -36,6 +36,7 @@ import cfclone.run
 @click.option(
     "--add-normal/--no-add-normal",
     default=True,
+    show_default=True,
     help="""Whether to add a a CNV profile for normal heterozyogus diploid cells.""",
 )
 @click.option(
@@ -46,6 +47,7 @@ import cfclone.run
 @click.option(
     "--outlier/--no-outlier",
     default=True,
+    show_default=True,
     help="""Whether to use outlier model.""",
 )
 @click.option(
@@ -90,6 +92,23 @@ def fit(**kwargs):
     """Fit cfClone model to data."""
     cfclone.run.fit(**kwargs)
 
+@click.command(context_settings={"max_content_width": 120}, name="init")
+def initialise(**kwargs):
+    """Setup Julia environment for cfClone."""
+    cfclone.run.initialise(**kwargs)
+
+
+@click.command(context_settings={"max_content_width": 120}, name="print-model-evidence")
+@click.option(
+    "-i",
+    "--in-file",
+    required=True,
+    type=click.Path(exists=True, resolve_path=True),
+    help="""Path to results from the `fit` command.""",
+)
+def print_model_evidence(**kwargs):
+    """Print the model evidence P(X|M)."""
+    cfclone.run.print_model_evidence(**kwargs)
 
 @click.command(context_settings={"max_content_width": 120}, name="init")
 def initialise(**kwargs):
@@ -115,6 +134,7 @@ def initialise(**kwargs):
 @click.option(
     "--normal/--no-normal",
     default=False,
+    show_default=True,
     help="""Whether to include the normal population.""",
 )
 def write_dominance_prob(**kwargs):
@@ -140,6 +160,7 @@ def write_dominance_prob(**kwargs):
 @click.option(
     "--normal/--no-normal",
     default=False,
+    show_default=True,
     help="""Whether to include the normal population.""",
 )
 def write_pairwise_ranks(**kwargs):
@@ -185,17 +206,20 @@ def write_prevalence_samples(**kwargs):
 @click.option(
     "--hdi-prob",
     default=0.95,
+    show_default=True,
     type=click.FloatRange(0, 1),
     help="""Width of HDI interval.""",
 )
 @click.option(
     "--normal/--no-normal",
     default=False,
+    show_default=True,
     help="""Whether to include the normal population.""",
 )
 @click.option(
     "--renormalise/--no-renormalise",
     default=True,
+    show_default=True,
     help="""Whether to normalise the prevalences to sum to one.""",
 )
 def write_prevalence_stats(**kwargs):
@@ -220,12 +244,33 @@ def write_prevalence_stats(**kwargs):
 )
 @click.option(
     "--compute-generated-quantities/--no-generated-quantities",
-    default=True,
+    default=False,
+    show_default=True,
     help="""Whether to compute and output model generated quantities (e.g. mu and p).""",
 )
 def write_samples(**kwargs):
     """Write the trace of all model parameters."""
     cfclone.run.write_samples(**kwargs)
+
+
+@click.command(context_settings={"max_content_width": 120}, name="write-summary")
+@click.option(
+    "-i",
+    "--in-file",
+    required=True,
+    type=click.Path(exists=True, resolve_path=True),
+    help="""Path to results from the `fit` command.""",
+)
+@click.option(
+    "-o",
+    "--out-file",
+    required=True,
+    type=click.Path(resolve_path=True),
+    help="""Path where results will be written in TSV format.""",
+)
+def write_summary(**kwargs):
+    """Write the trace of all model parameters."""
+    cfclone.run.write_summary(**kwargs)
 
 
 @click.command(context_settings={"max_content_width": 120}, name="write-tumour-content")
@@ -246,6 +291,7 @@ def write_samples(**kwargs):
 @click.option(
     "--hdi-prob",
     default=0.95,
+    show_default=True,
     type=click.FloatRange(0, 1),
     help="""Width of HDI interval.""",
 )
@@ -261,9 +307,11 @@ def main():
 
 main.add_command(fit)
 main.add_command(initialise)
+main.add_command(print_model_evidence)
 main.add_command(write_dominance_prob)
 main.add_command(write_pairwise_ranks)
 main.add_command(write_prevalence_samples)
 main.add_command(write_prevalence_stats)
 main.add_command(write_samples)
+main.add_command(write_summary)
 main.add_command(write_tumour_content)
