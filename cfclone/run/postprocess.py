@@ -30,6 +30,8 @@ def write_dominance_prob(in_file, out_file, normal=False):
     prob_dom = prob_dom.reset_index()
     prob_dom.rename(columns={"is_max": "dominance_prob"}, inplace=True)
 
+    prob_dom.index.name = "clone"
+
     prob_dom.to_csv(out_file, sep="\t")
 
 
