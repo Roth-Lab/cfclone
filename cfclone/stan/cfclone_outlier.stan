@@ -37,8 +37,8 @@ parameters {
   real<lower=1e-6> sigma_outlier;
   
   // // these, on the other hand, are numerically stable even close to the boundaries [0, 1]
-  real<lower=0, upper=1> outlier_rate_rdr; // proportion of genomic bins that are consider outliers in the rdr data.
-  real<lower=0, upper=1> outlier_rate_baf; // proportion of genomic bins that are consider outliers in the rdr data.
+  real<lower=0, upper=1> outlier_rate_rdr; // probability a genomic bin is are considered outliers in the RDR data.
+  real<lower=0, upper=1> outlier_rate_baf; // probability a genomic bin is are considered outliers in the BAF data.
 }
 model {
   rho ~ dirichlet(ones);
@@ -54,7 +54,7 @@ model {
   vector[num_bins] mu;
   vector[num_bins] p;
   
-  mu = (cn_t * rho) / dot_product(mean_clone_cn, rho);
+  mu = alpha * (cn_t * rho) / dot_product(mean_clone_cn, rho);
   
   p = (cn_a * rho) ./ (cn_t * rho);
   

@@ -1,12 +1,3 @@
-functions {
-  real baf_lpmf(int b, int d, real alpha, real beta, real outlier_rate_baf) {
-    return log_mix(outlier_rate_baf, beta_binomial_lpmf(b | d, 1., 1.), beta_binomial_lpmf(b | d, alpha, beta));
-  }
-  
-  real rdr_lpdf(real rdr, real mu, real sigma, real sigma_outlier, real outlier_rate_rdr) {
-    return log_mix(outlier_rate_rdr, student_t_lpdf(rdr | 25, 0, sigma_outlier), student_t_lpdf(rdr | 25, mu, sigma));
-  }
-}
 data {
   int<lower=1> num_bins;
   int<lower=1> num_clones;
@@ -46,7 +37,7 @@ model {
   vector[num_bins] mu;
   vector[num_bins] p;
   
-  mu = (cn_t * rho) / dot_product(mean_clone_cn, rho);
+  mu = alpha * (cn_t * rho) / dot_product(mean_clone_cn, rho);
   
   p = (cn_a * rho) ./ (cn_t * rho);
   
