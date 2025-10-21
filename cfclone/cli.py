@@ -300,6 +300,32 @@ def write_tumour_content(**kwargs):
     cfclone.run.write_tumour_content(**kwargs)
 
 
+@click.command(context_settings={"max_content_width": 120}, name="write-parameter-summaries")
+@click.option(
+    "-i",
+    "--in-file",
+    required=True,
+    type=click.Path(exists=True, resolve_path=True),
+    help="""Path to results from the `fit` command.""",
+)
+@click.option(
+    "-o",
+    "--out-file",
+    required=True,
+    type=click.Path(resolve_path=True, writable=True),
+    help="""Path where results will be written in TSV format.""",
+)
+@click.option(
+    "--hdi-prob",
+    default=0.95,
+    type=click.FloatRange(0, 1),
+    help="""Width of HDI interval.""",
+)
+def write_parameter_summaries(**kwargs):
+    """Write the posterior summary tables for mu and p model parameters."""
+    cfclone.run.write_parameter_summaries(**kwargs)
+
+
 @click.group(name="cfclone", context_settings={"max_content_width": 140})
 def main():
     pass
@@ -315,3 +341,5 @@ main.add_command(write_prevalence_stats)
 main.add_command(write_samples)
 main.add_command(write_summary)
 main.add_command(write_tumour_content)
+main.add_command(write_parameter_summaries)
+
