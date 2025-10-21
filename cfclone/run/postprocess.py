@@ -61,22 +61,48 @@ def write_parameter_summaries(
 def _compute_rdr_outlier_prob(p_df, samples_df, data):
     p = p_df.to_numpy()
     w = samples_df["outlier_rate_rdr"].to_numpy()
-    n = samples_df["non_binomiality"].to_numpy()
+    n = samples_df["non_binomiality"].to_numpy()[..., np.newaxis]
     data_a = data["a"]
     data_d = data["d"]
-    result = np.zeros(p.shape)
-    temp = np.zeros((2, p.shape[1]))
 
-    for i in range(p.shape[0]):
-        a = p[i] / n[i]
-        b = (1 - p[i]) / n[i]
-        temp[0] = np.log(w[i]) + ss.betabinom.pmf(data_a, data_d, 1, 1)
-        temp[1] = np.log1p(-w[i]) + ss.betabinom.pmf(data_a, data_d, a, b)
-        result[i] = temp[0] - log_sum_exp(temp, axis=0)
+    a_tmp = p / n
+    b_tmp = (1 - p) / n
+
+    log_w = np.log(w)[..., np.newaxis]
+    log_w_minus_1 = np.log1p(-w)[..., np.newaxis]
+
+    beta_binom_ones = ss.betabinom.pmf(data_a, data_d, 1, 1)
+
+    beta_binom_a_b = ss.betabinom.pmf(data_a, data_d, a_tmp, b_tmp)
+
+    stacked = np.stack([log_w + beta_binom_ones, log_w_minus_1 + beta_binom_a_b])
+
+    result = stacked[0] - log_sum_exp(stacked, axis=0)
 
     num_bins = p.shape[1]
     rdr_outlier_df = pd.DataFrame(result, columns=["rdr_outlier.{}".format(i) for i in range(num_bins)])
     return rdr_outlier_df
+
+
+# def _compute_rdr_outlier_prob(p_df, samples_df, data):
+#     p = p_df.to_numpy()
+#     w = samples_df["outlier_rate_rdr"].to_numpy()
+#     n = samples_df["non_binomiality"].to_numpy()[..., np.newaxis]
+#     data_a = data["a"]
+#     data_d = data["d"]
+#     result = np.zeros(p.shape)
+#     temp = np.zeros((2, p.shape[1]))
+#
+#     for i in range(p.shape[0]):
+#         a = p[i] / n[i]
+#         b = (1 - p[i]) / n[i]
+#         temp[0] = np.log(w[i]) + ss.betabinom.pmf(data_a, data_d, 1, 1)
+#         temp[1] = np.log1p(-w[i]) + ss.betabinom.pmf(data_a, data_d, a, b)
+#         result[i] = temp[0] - log_sum_exp(temp, axis=0)
+#
+#     num_bins = p.shape[1]
+#     rdr_outlier_df = pd.DataFrame(result, columns=["rdr_outlier.{}".format(i) for i in range(num_bins)])
+#     return rdr_outlier_df
 
 
 def _compute_baf_outlier_prob(mu_df, samples_df, data):
