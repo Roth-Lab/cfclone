@@ -326,6 +326,59 @@ def write_parameter_summaries(**kwargs):
     cfclone.run.write_parameter_summaries(**kwargs)
 
 
+@click.command(context_settings={"max_content_width": 120}, name="write-ancestral-prevalences")
+@click.option(
+    "-i",
+    "--in-file",
+    required=True,
+    type=click.Path(exists=True, resolve_path=True),
+    help="""Path to results from the `fit` command.""",
+)
+@click.option(
+    "-c",
+    "--clonal-newick",
+    required=True,
+    type=click.Path(exists=True, resolve_path=True),
+    help="""Path to the clonal phylogeny, in newick format.""",
+)
+@click.option(
+    "-o",
+    "--out-table",
+    required=True,
+    type=click.Path(resolve_path=True, writable=True),
+    help="""Path where prevalence results table will be written in TSV format.""",
+)
+@click.option(
+    "-t",
+    "--tree-json",
+    required=True,
+    type=click.Path(resolve_path=True, writable=True),
+    help="""Path where tree with computed prevalence information will be written in JSON format.""",
+)
+@click.option(
+    "--hdi-prob",
+    default=0.95,
+    show_default=True,
+    type=click.FloatRange(0, 1),
+    help="""Width of HDI interval.""",
+)
+@click.option(
+    "--normal/--no-normal",
+    default=False,
+    show_default=True,
+    help="""Whether to include the normal population.""",
+)
+@click.option(
+    "--renormalise/--no-renormalise",
+    default=True,
+    show_default=True,
+    help="""Whether to normalise the prevalences to sum to one.""",
+)
+def compute_ancestral_prevalences(**kwargs):
+    """Given a clonal phylogeny, compute ancestral (and observed) clonal prevalence information."""
+    cfclone.run.compute_ancestral_prevalences(**kwargs)
+
+
 @click.group(name="cfclone", context_settings={"max_content_width": 140})
 def main():
     pass
@@ -342,4 +395,4 @@ main.add_command(write_samples)
 main.add_command(write_summary)
 main.add_command(write_tumour_content)
 main.add_command(write_parameter_summaries)
-
+main.add_command(compute_ancestral_prevalences)
