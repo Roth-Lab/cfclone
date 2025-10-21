@@ -71,7 +71,9 @@ def _build_parameter_summary_df(df, hdi_prob, param_name, col_prefix):
 def write_dominance_prob(in_file, out_file, normal=False):
     data, samples_df, _ = _load_results(in_file)
 
-    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=normal, renormalise=False)
+    renormalise = _should_renormalise(normal)
+
+    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=normal, renormalise=renormalise)
 
     rho_df["max_rho"] = rho_df[rho_cols].max(axis=1)
 
@@ -260,7 +262,7 @@ def _build_rho_long_df(samples_df, keep_normal, renormalise):
     return df
 
 
-def _build_rho_wide_df(samples_df, keep_normal, renormalise):
+def _build_rho_wide_df(samples_df, keep_normal, renormalise, keep_cols=None):
     if not keep_normal:
         df = samples_df.drop(columns="rho_normal", errors="ignore")
 
@@ -280,6 +282,12 @@ def _build_rho_wide_df(samples_df, keep_normal, renormalise):
 
     cols_to_keep.extend(rho_cols)
 
+    if keep_cols is not None:
+        if isinstance(keep_cols, str):
+            cols_to_keep.append(keep_cols)
+        else:
+            cols_to_keep.extend(keep_cols)
+
     df = df[cols_to_keep].copy()
 
     return df, rho_cols
@@ -294,18 +302,27 @@ def _create_mu_and_p_cols(data, samples_df):
 
 
 def _build_mu_and_p_dfs(data, samples_df):
-    cn_a, cn_t = data["cn_a"], data["cn_t"]
-    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=True, renormalise=False)
+    cn_t = data["cn_t"]
+    cn_a = data["cn_a"]
+    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=True, renormalise=False, keep_cols="alpha")
+
     rho = rho_df[rho_cols].to_numpy()
+    mean_clone_cn = np.mean(cn_t, axis=1)
+    alpha = rho_df["alpha"].to_numpy()
+    alpha = alpha[..., np.newaxis]
+
+    rho_mat_cn_t = rho @ cn_t
+
+    mu = rho_mat_cn_t * alpha
+    mu /= np.matvec(rho, mean_clone_cn)[..., np.newaxis]
+
+    p = rho @ cn_a
+    p /= rho_mat_cn_t
+
     num_bins = cn_t.shape[1]
-    # num_sample_draws = rho.shape[0]
-    # mean_clone_cn = np.mean(cn_t, axis=1)
-    print(rho.shape)
-    mu = rho @ cn_t
-    mu /= mu.mean(axis=1)[:, np.newaxis]
-    p = (rho @ cn_a) / (rho @ cn_t)
-    mu_df = pd.DataFrame(mu, columns=["mu.{}".format(i) for i in range(1, num_bins + 1)])
-    p_df = pd.DataFrame(p, columns=["p.{}".format(i) for i in range(1, num_bins + 1)])
+
+    mu_df = pd.DataFrame(mu, columns=["mu.{}".format(i) for i in range(num_bins)])
+    p_df = pd.DataFrame(p, columns=["p.{}".format(i) for i in range(num_bins)])
     return mu_df, p_df
 
 
