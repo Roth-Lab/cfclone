@@ -127,7 +127,7 @@ def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None, only_norm
 
     if len(use_clone) > 0:
         # print(use_clone)
-        clone_list = [x for x in use_clone]
+        clone_list = list({x for x in use_clone})
         cn_a = cn_a.loc[clone_list]
 
         cn_b = cn_b.loc[clone_list]
