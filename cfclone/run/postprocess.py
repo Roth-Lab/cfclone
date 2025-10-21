@@ -5,12 +5,150 @@ import numpy as np
 import pandas as pd
 from scipy.special import logsumexp as log_sum_exp
 import scipy.stats as ss
+from skbio.tree import TreeNode
+import networkx as nx
+from .json_serialisation import serialise_networkx_tree_to_json
 
 
 def print_model_evidence(in_file):
     _, _, summary_df = _load_results(in_file)
 
     print(summary_df.iloc[-1]["stepping_stone"])
+
+
+def preprocess_tree_to_extant_tips(clones, tree):
+    index_set = set(clones)
+    tip_set = set(tip.name for tip in tree.tips())
+    tip_intersect = tip_set.intersection(index_set)
+    return tree.shear(tip_intersect, prune=True, strict=False, inplace=False)
+
+
+def assign_ancestral_node_names(clones, treefile):
+    tree = TreeNode.read(treefile, convert_underscores=False)
+    tree = preprocess_tree_to_extant_tips(clones, tree)
+    template = "ancestral_{}"
+    tree.assign_ids()
+
+    ancestral_id_map = {}
+
+    inner_node_idx = 0
+
+    for node in tree.preorder():
+        if node.is_tip():
+            continue
+        ancestral_id_map[node.id] = inner_node_idx
+        inner_node_idx += 1
+
+    for node in tree.postorder():
+
+        if node.name is None:
+            node.name = template.format(ancestral_id_map[node.id])
+
+    return tree
+
+
+def build_clone_df_and_tree(df, tree):
+    df["clone_id"] = df["clone_id"].astype(str)
+    df = df.set_index(["iteration", "chain"])
+    clonal_grouped = df.groupby("clone_id")
+
+    grp_dict = dict()
+    for node in tree.postorder():
+        if node.is_tip():
+            grp_dict[node.name] = clonal_grouped.get_group(node.name)
+            continue
+
+        node_grp = grp_dict[node.children[0].name].copy()
+        node_grp["clone_id"] = node.name
+
+        for child in node.children[1:]:
+            child_name = child.name
+            child_grp = grp_dict[child_name]
+            node_grp["rho"] += child_grp["rho"]
+
+        grp_dict[node.name] = node_grp
+    clone_df = pd.concat(grp_dict.values()).reset_index()
+    return clone_df, tree
+
+
+def scikit_tree_to_networkx_add_prev_and_hdi(tree, df_summary):
+    nx_graph = nx.DiGraph()
+
+    index_template = "rho[{}]"
+
+    tip_label = "Clone {}\nClonal Prev: {}\nHDI lower: {} | HDI upper: {}"
+    inner_label = "{}\nClonal Prev: {}\nHDI lower: {} | HDI upper: {}"
+
+    for node in tree.traverse():
+
+        node_name = node.name
+        summary_row = df_summary.loc[index_template.format(node_name)]
+
+        for child in node.children:
+            child_name = child.name
+            nx_graph.add_edge(node_name, child_name, length=child.length)
+
+        hdi_low = summary_row["lower_hdi"]
+        hdi_upper = summary_row["upper_hdi"]
+        mean = summary_row["mean_prevalence"]
+
+        if node.is_tip():
+            label = tip_label.format(node_name, round(mean, 3), round(hdi_low, 3), round(hdi_upper, 3))
+        else:
+            label = inner_label.format(node_name, round(mean, 3), round(hdi_low, 3), round(hdi_upper, 3))
+
+        nx_graph.add_node(node_name, label=label, prevalence_stats=summary_row)
+
+    return nx_graph
+
+
+def finalise_ancestral_rho_summary_df(df_summary, tree, sample_id=None):
+    if sample_id is not None:
+        df_summary["sample_id"] = sample_id
+    df_summary = df_summary.reset_index(names=["parameters"])
+    df_summary[["parameter_name", "clone_id"]] = df_summary["parameters"].str.split("[", expand=True)
+    df_summary["clone_id"] = df_summary["clone_id"].str.removesuffix("]")
+    df_summary.drop(columns=["parameters"], inplace=True)
+    node_order_dict = {v.name: k for k, v in enumerate(tree.postorder())}
+    df_summary = df_summary.set_index("clone_id")
+    df_summary["clone_tree_order_idx"] = node_order_dict
+    df_summary.reset_index(inplace=True)
+    return df_summary
+
+
+def compute_ancestral_prevalences(
+    in_file,
+    out_table,
+    tree_json,
+    clone_newick,
+    normal=False,
+    renormalise=True,
+    hdi_prob=0.95,
+    sample_id=None,
+):
+    data, samples_df, _ = _load_results(in_file)
+    tree = assign_ancestral_node_names(data["clones"], clone_newick)
+
+    rho_df = _build_rho_long_df(samples_df, keep_normal=normal, renormalise=renormalise)
+    rho_df, tree = build_clone_df_and_tree(rho_df, tree)
+    df_summary = build_arviz_rho_summary_df(rho_df, "rho", hdi_prob)
+    hdi_col_name_map = _define_hdi_upper_and_lower_cols(df_summary, rename=True)
+    _rename_arviz_summary_mean_median_cols(df_summary, "prevalence")
+
+    nx_tree = scikit_tree_to_networkx_add_prev_and_hdi(tree, df_summary)
+
+    if sample_id is not None:
+        nx_tree.graph["sample_id"] = sample_id
+    rev_hdi_col_map = {v: k for k, v in hdi_col_name_map.items()}
+    nx_tree.graph["hdi_interval_width"] = hdi_prob
+    nx_tree.graph["normal_clone_kept"] = normal
+    nx_tree.graph["prevalences_renormalised"] = renormalise
+    nx_tree.graph.update(rev_hdi_col_map)
+
+    df_summary = finalise_ancestral_rho_summary_df(df_summary, tree, sample_id)
+
+    df_summary.to_csv(out_table, sep="\t", index=False)
+    serialise_networkx_tree_to_json(nx_tree, tree_json)
 
 
 def write_parameter_summaries(
@@ -269,8 +407,8 @@ def write_tumour_content(in_file, out_file, hdi_prob=0.95):
     out_record = {
         "mean": rho_df["tumour_content"].mean(),
         "median": rho_df["tumour_content"].median(),
-        "lower_ci": hdi[0],
-        "upper_ci": hdi[1],
+        "lower_hdi": hdi[0],
+        "upper_hdi": hdi[1],
     }
 
     out_df = pd.DataFrame([out_record])
@@ -370,7 +508,7 @@ def _build_rho_wide_df(samples_df, keep_normal, renormalise, keep_cols=None):
     else:
         df = samples_df
 
-    #TODO: handle cases where normal was dropped while being the only clone
+    # TODO: handle cases where normal was dropped while being the only clone
 
     rho_cols = [col for col in df.columns if col.startswith("rho")]
 
@@ -460,15 +598,36 @@ def _build_arviz_summary_df_long(df, varname, hdi_prob, drop_sd_col=True):
     return df_summary
 
 
+def build_arviz_rho_summary_df(df, varname, hdi_prob, drop_sd_col=True):
+    stats_funcs = {"median": np.median}
+    df = df.rename(columns={"iteration": "draw"})
+    df = df.set_index(["chain", "draw", "clone_id"])
+    xdata = xr.Dataset.from_dataframe(df)
+    az_dataset = az.InferenceData(posterior=xdata)
+    df_summary = az.summary(
+        az_dataset,
+        var_names=[varname],
+        kind="stats",
+        hdi_prob=hdi_prob,
+        round_to="none",
+        extend=True,
+        stat_funcs=stats_funcs,
+    )
+    if drop_sd_col:
+        df_summary.drop(columns="sd", inplace=True)
+    return df_summary
+
+
 def _define_hdi_upper_and_lower_cols(df_summary, rename=True):
     hdi_cols = {col: float(col[4:-1]) for col in df_summary.columns if col.startswith("hdi")}
     hdi_col_names = list(hdi_cols.keys())
     if hdi_cols[hdi_col_names[0]] < hdi_cols[hdi_col_names[1]]:
-        hdi_col_name_map = {hdi_col_names[0]: "lower_ci", hdi_col_names[1]: "upper_ci"}
+        hdi_col_name_map = {hdi_col_names[0]: "lower_hdi", hdi_col_names[1]: "upper_hdi"}
     else:
-        hdi_col_name_map = {hdi_col_names[1]: "lower_ci", hdi_col_names[0]: "upper_ci"}
+        hdi_col_name_map = {hdi_col_names[1]: "lower_hdi", hdi_col_names[0]: "upper_hdi"}
     if rename:
         df_summary.rename(columns=hdi_col_name_map, inplace=True)
     else:
         for hdi_col, new_name in hdi_col_name_map.items():
             df_summary[new_name] = df_summary[hdi_col]
+    return hdi_col_name_map
