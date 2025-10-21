@@ -15,3 +15,5 @@ dependencies:
   - pyjuliacall>=0.9.22
   - pyjuliapkg
   - scipy
+  - networkx
+  - scikit-bio
