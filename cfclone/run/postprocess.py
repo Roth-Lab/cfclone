@@ -56,7 +56,7 @@ def write_prevalence_samples(in_file, out_file):
 
     out_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=True, renormalise=False)
 
-    out_df = out_df.rename(columns=lambda x: x.replace("rho", "clone"))
+    out_df.columns = out_df.columns.str.replace("rho", "clone")
 
     out_df.to_csv(out_file, index=False, sep="\t")
 
