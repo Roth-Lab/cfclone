@@ -107,21 +107,44 @@ def _compute_rdr_outlier_prob(p_df, samples_df, data):
 
 def _compute_baf_outlier_prob(mu_df, samples_df, data):
     mu = mu_df.to_numpy()
-    s = samples_df["sigma"].to_numpy()
-    s_outlier = samples_df["sigma_outlier"].to_numpy()
+    s = samples_df["sigma"].to_numpy()[..., np.newaxis]
+    s_outlier = samples_df["sigma_outlier"].to_numpy()[..., np.newaxis]
     w = samples_df["outlier_rate_rdr"].to_numpy()
-    result = np.zeros(mu.shape)
-    temp = np.zeros((2, mu.shape[1]))
+
     data_rdr = data["rdr"]
 
-    for i in range(mu.shape[0]):
-        temp[0] = np.log(w[i]) + ss.t.logpdf(data_rdr, 25, 0, s_outlier[i])
-        temp[1] = np.log1p(-w[i]) + ss.t.logpdf(data_rdr, 25, mu[i], s[i])
-        result[i] = temp[0] - log_sum_exp(temp, axis=0)
+    log_w = np.log(w)[..., np.newaxis]
+    log_w_minus_1 = np.log1p(-w)[..., np.newaxis]
+
+    s_outlier_pdf = ss.t.logpdf(data_rdr, 25, 0, s_outlier)
+
+    mu_s_pdf = ss.t.logpdf(data_rdr, 25, mu, s)
+
+    stacked = np.stack([log_w + s_outlier_pdf, log_w_minus_1 + mu_s_pdf])
+
+    result = stacked[0] - log_sum_exp(stacked, axis=0)
 
     num_bins = mu.shape[1]
     baf_outlier_df = pd.DataFrame(result, columns=["baf_outlier.{}".format(i) for i in range(num_bins)])
     return baf_outlier_df
+
+# def _compute_baf_outlier_prob(mu_df, samples_df, data):
+#     mu = mu_df.to_numpy()
+#     s = samples_df["sigma"].to_numpy()
+#     s_outlier = samples_df["sigma_outlier"].to_numpy()
+#     w = samples_df["outlier_rate_rdr"].to_numpy()
+#     result = np.zeros(mu.shape)
+#     temp = np.zeros((2, mu.shape[1]))
+#     data_rdr = data["rdr"]
+#
+#     for i in range(mu.shape[0]):
+#         temp[0] = np.log(w[i]) + ss.t.logpdf(data_rdr, 25, 0, s_outlier[i])
+#         temp[1] = np.log1p(-w[i]) + ss.t.logpdf(data_rdr, 25, mu[i], s[i])
+#         result[i] = temp[0] - log_sum_exp(temp, axis=0)
+#
+#     num_bins = mu.shape[1]
+#     baf_outlier_df = pd.DataFrame(result, columns=["baf_outlier.{}".format(i) for i in range(num_bins)])
+#     return baf_outlier_df
 
 
 def add_bin_cols_to_summary_df(bins, df):
