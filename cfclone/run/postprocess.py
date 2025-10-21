@@ -227,33 +227,27 @@ def _build_rho_wide_df(samples_df, keep_normal, renormalise):
 
 
 def _create_mu_and_p_cols(data, samples_df):
-    cn_a, cn_t = data["cn_a"], data["cn_t"]
-
-    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=True, renormalise=False)
-
-    rho = rho_df[rho_cols].to_numpy()
-
-    num_bins = cn_t.shape[1]
-
-    num_sample_draws = rho.shape[0]
-
-    mean_clone_cn = np.mean(cn_t, axis=1)
-
-    print(rho.shape)
-
-    mu = rho @ cn_t
-
-    mu /= mu.mean(axis=1)[:, np.newaxis]
-
-    p = (rho @ cn_a) / (rho @ cn_t)
-
-    mu_df = pd.DataFrame(mu, columns=["mu.{}".format(i) for i in range(1, num_bins + 1)])
-
-    p_df = pd.DataFrame(p, columns=["p.{}".format(i) for i in range(1, num_bins + 1)])
+    mu_df, p_df = _build_mu_and_p_dfs(data, samples_df)
 
     samples_df = samples_df.join([mu_df, p_df])
 
     return samples_df
+
+
+def _build_mu_and_p_dfs(data, samples_df):
+    cn_a, cn_t = data["cn_a"], data["cn_t"]
+    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=True, renormalise=False)
+    rho = rho_df[rho_cols].to_numpy()
+    num_bins = cn_t.shape[1]
+    # num_sample_draws = rho.shape[0]
+    # mean_clone_cn = np.mean(cn_t, axis=1)
+    print(rho.shape)
+    mu = rho @ cn_t
+    mu /= mu.mean(axis=1)[:, np.newaxis]
+    p = (rho @ cn_a) / (rho @ cn_t)
+    mu_df = pd.DataFrame(mu, columns=["mu.{}".format(i) for i in range(1, num_bins + 1)])
+    p_df = pd.DataFrame(p, columns=["p.{}".format(i) for i in range(1, num_bins + 1)])
+    return mu_df, p_df
 
 
 def _should_renormalise(normal):
