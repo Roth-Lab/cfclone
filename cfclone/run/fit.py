@@ -54,21 +54,9 @@ def fit(
         num_rounds=num_rounds,
     )
 
-    chains = jl.Chains(pt)
+    samples_df = build_samples_df(clones, jl, pt)
 
-    samples_df = jl.PythonCall.pytable(chains)
-
-    clone_dict = {i + 1: clone for i, clone in enumerate(clones)}
-
-    rho_map = {col: "rho_{}".format(clone_dict[int(col[4:])]) for col in samples_df.columns if col.startswith("rho.")}
-
-    samples_df.rename(columns=rho_map, inplace=True)
-
-    summary_df = jl.PythonCall.pytable(pt.shared.reports.summary)
-
-    summary_df = summary_df.drop("last_round_max_allocation", axis=1)
-
-    summary_df = summary_df.astype(np.float64)
+    summary_df = build_summary_df(jl, pt)
 
     with h5py.File(out_file, "w") as fh:
         fh.create_dataset("/data/bins", data=bins, dtype=h5py.string_dtype(encoding="utf-8"))
@@ -85,16 +73,31 @@ def fit(
 
         dset = fh.create_dataset("/data/rdr", data=data["rdr"], dtype=np.float64)
 
-        dset = fh.create_dataset("/results/samples", data=samples_df.values, dtype=np.float64)
+        dset = fh.create_dataset("/results/samples", data=samples_df.to_numpy(), dtype=np.float64)
         dset.attrs["columns"] = [str(x) for x in samples_df.columns]
 
-        dset = fh.create_dataset("/results/summary", data=summary_df.values, dtype=np.float64)
+        dset = fh.create_dataset("/results/summary", data=summary_df.to_numpy(), dtype=np.float64)
         dset.attrs["columns"] = [str(x) for x in summary_df.columns]
+
+
+def build_summary_df(jl, pt):
+    summary_df = jl.PythonCall.pytable(pt.shared.reports.summary)
+    summary_df = summary_df.drop("last_round_max_allocation", axis=1)
+    summary_df = summary_df.astype(np.float64)
+    return summary_df
+
+
+def build_samples_df(clones, jl, pt):
+    chains = jl.Chains(pt)
+    samples_df = jl.PythonCall.pytable(chains)
+    clone_dict = {i + 1: clone for i, clone in enumerate(clones)}
+    rho_map = {col: "rho_{}".format(clone_dict[int(col[4:])]) for col in samples_df.columns if col.startswith("rho.")}
+    samples_df.rename(columns=rho_map, inplace=True)
+    return samples_df
 
 
 def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None, only_normal=False, use_clone=()):
     df = pd.read_csv(in_file, sep="\t")
-    print(use_clone)
 
     _add_bin_name_col(df)
 
@@ -123,9 +126,11 @@ def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None, only_norm
     cn_b = clone_df.pivot(index="clone", columns="bin_name", values="cn_b")[bins]
 
     if len(use_clone) > 0:
-        cn_a = cn_a.loc[[x for x in use_clone]]
+        # print(use_clone)
+        clone_list = [x for x in use_clone]
+        cn_a = cn_a.loc[clone_list]
 
-        cn_b = cn_b.loc[[x for x in use_clone]]
+        cn_b = cn_b.loc[clone_list]
 
     if add_normal:
         cn_a = _add_normal_clone(cn_a)
@@ -166,6 +171,6 @@ def _add_normal_clone(df):
     clones = list(df.index)
     clones.append("normal")
     bins = df.columns
-    vals = df.values
+    vals = df.to_numpy()
     vals = np.vstack([vals, np.ones(df.shape[1])])
     return pd.DataFrame(vals, index=clones, columns=bins)
