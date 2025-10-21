@@ -37,15 +37,59 @@ def write_parameter_summaries(
 
     iter_chain_df = samples_df[["iteration", "chain"]]
 
-    mu_summary = _process_param_table(mu_df, iter_chain_df, hdi_prob, "mu", "mu")
-    p_summary = _process_param_table(p_df, iter_chain_df, hdi_prob, "p", "p")
-    mu_residual_summary = _process_param_table(mu_residual, iter_chain_df, hdi_prob, "mu", "mu_residual")
-    p_residual_summary = _process_param_table(p_residual, iter_chain_df, hdi_prob, "p", "p_residual")
-    baf_outlier_summary = _process_param_table(baf_outlier_df, iter_chain_df, hdi_prob, "baf_outlier", "baf_outlier_prob")
-    rdr_outlier_summary = _process_param_table(rdr_outlier_df, iter_chain_df, hdi_prob, "rdr_outlier", "rdr_outlier_prob")
+    mu_summary = _process_param_table(
+        mu_df,
+        iter_chain_df,
+        hdi_prob,
+        "mu",
+        "mu",
+    )
+    p_summary = _process_param_table(
+        p_df,
+        iter_chain_df,
+        hdi_prob,
+        "p",
+        "p",
+    )
+    mu_residual_summary = _process_param_table(
+        mu_residual,
+        iter_chain_df,
+        hdi_prob,
+        "mu",
+        "mu_residual",
+    )
+    p_residual_summary = _process_param_table(
+        p_residual,
+        iter_chain_df,
+        hdi_prob,
+        "p",
+        "p_residual",
+    )
+    baf_outlier_summary = _process_param_table(
+        baf_outlier_df,
+        iter_chain_df,
+        hdi_prob,
+        "baf_outlier",
+        "baf_outlier_prob",
+    )
+    rdr_outlier_summary = _process_param_table(
+        rdr_outlier_df,
+        iter_chain_df,
+        hdi_prob,
+        "rdr_outlier",
+        "rdr_outlier_prob",
+    )
 
-    result_df = mu_summary.join([mu_residual_summary, p_summary, p_residual_summary, baf_outlier_summary, rdr_outlier_summary])
-    add_bin_cols_to_summary_df(data["bins"], result_df)
+    result_df = mu_summary.join(
+        [
+            mu_residual_summary,
+            p_summary,
+            p_residual_summary,
+            baf_outlier_summary,
+            rdr_outlier_summary,
+        ]
+    )
+    _add_bin_cols_to_summary_df(data["bins"], result_df)
 
     result_df.to_csv(out_file, sep="\t")
 
@@ -106,7 +150,7 @@ def _compute_baf_outlier_prob(mu_df, samples_df, data):
     return baf_outlier_df
 
 
-def add_bin_cols_to_summary_df(bins, df):
+def _add_bin_cols_to_summary_df(bins, df):
     df["bin_name"] = bins
     df[["chrom", "start", "end"]] = df["bin_name"].str.split(":", expand=True)
     df.drop(columns="bin_name", inplace=True)
