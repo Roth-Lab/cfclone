@@ -7,7 +7,6 @@ dependencies:
   - click>=8.0
   - cxx-compiler
   - h5py
-  - arviz
   - juliaup
   - make
   - numpy
@@ -15,3 +14,4 @@ dependencies:
   - tbb-devel
   - pyjuliacall>=0.9.22
   - pyjuliapkg
+  - scipy
