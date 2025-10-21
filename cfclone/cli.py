@@ -336,7 +336,7 @@ def write_parameter_summaries(**kwargs):
 )
 @click.option(
     "-c",
-    "--clonal-newick",
+    "--clone-newick",
     required=True,
     type=click.Path(exists=True, resolve_path=True),
     help="""Path to the clonal phylogeny, in newick format.""",
@@ -373,6 +373,13 @@ def write_parameter_summaries(**kwargs):
     default=True,
     show_default=True,
     help="""Whether to normalise the prevalences to sum to one.""",
+)
+@click.option(
+    "--sample-id",
+    default=None,
+    show_default=True,
+    type=click.STRING,
+    help="""Sample ID associated with the dataset.""",
 )
 def compute_ancestral_prevalences(**kwargs):
     """Given a clonal phylogeny, compute ancestral (and observed) clonal prevalence information."""

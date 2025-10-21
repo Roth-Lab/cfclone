@@ -168,6 +168,7 @@ def _add_bin_name_col(df):
 
 
 def _add_normal_clone(df):
+    #TODO: Deal with sex chromosomes properly
     clones = list(df.index)
     clones.append("normal")
     bins = df.columns
