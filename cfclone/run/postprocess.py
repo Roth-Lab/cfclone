@@ -89,6 +89,8 @@ def write_parameter_summaries(
             rdr_outlier_summary,
         ]
     )
+    result_df["data_rdr"] = data["rdr"]
+    result_df["data_baf"] = baf
     _add_bin_cols_to_summary_df(data["bins"], result_df)
 
     result_df.to_csv(out_file, sep="\t")
@@ -367,6 +369,8 @@ def _build_rho_wide_df(samples_df, keep_normal, renormalise, keep_cols=None):
 
     else:
         df = samples_df
+
+    #TODO: handle cases where normal was dropped while being the only clone
 
     rho_cols = [col for col in df.columns if col.startswith("rho")]
 
