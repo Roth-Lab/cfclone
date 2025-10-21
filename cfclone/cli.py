@@ -387,6 +387,7 @@ def compute_ancestral_prevalences(**kwargs):
 
 
 @click.group(name="cfclone", context_settings={"max_content_width": 140})
+@click.version_option()
 def main():
     pass
 
