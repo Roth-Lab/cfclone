@@ -24,38 +24,49 @@ def write_parameter_summaries(
     print("mu and p dataframes built")
 
     baf = data["a"] / data["d"]
-    rdr = data["rdr"]
+    # rdr = data["rdr"]
 
-    mu_residual = mu_df.rsub(rdr)
+    mu_residual = mu_df.rsub(data["rdr"])
     p_residual = p_df.rsub(baf)
+
+    print("mu and p residuals computed\n")
 
     rdr_outlier_df = _compute_rdr_outlier_prob(p_df, samples_df, data)
     baf_outlier_df = _compute_baf_outlier_prob(mu_df, samples_df, data)
 
-    print("mu and p residuals computed\n")
-
-    bins = data["bins"]
+    print("RDR and BAF outlier probs computed\n")
 
     iter_chain_df = samples_df[["iteration", "chain"]]
-    mu_df = iter_chain_df.join(mu_df)
-    mu_summary = _build_parameter_summary_df(mu_df, hdi_prob, "mu", "mu")
 
-    p_df = iter_chain_df.join(p_df)
-    mu_residual = iter_chain_df.join(mu_residual)
-    p_residual = iter_chain_df.join(p_residual)
-    rdr_outlier_df = iter_chain_df.join(rdr_outlier_df)
-    baf_outlier_df = iter_chain_df.join(baf_outlier_df)
+    mu_summary = _process_param_table(mu_df, iter_chain_df, hdi_prob, "mu", "mu")
+    p_summary = _process_param_table(p_df, iter_chain_df, hdi_prob, "p", "p")
+    mu_residual_summary = _process_param_table(mu_residual, iter_chain_df, hdi_prob, "mu", "mu_residual")
+    p_residual_summary = _process_param_table(p_residual, iter_chain_df, hdi_prob, "p", "p_residual")
+    baf_outlier_summary = _process_param_table(baf_outlier_df, iter_chain_df, hdi_prob, "baf_outlier", "baf_outlier_prob")
+    rdr_outlier_summary = _process_param_table(rdr_outlier_df, iter_chain_df, hdi_prob, "rdr_outlier", "rdr_outlier_prob")
 
-    p_summary = _build_parameter_summary_df(p_df, hdi_prob, "p", "p")
-    mu_residual_summary = _build_parameter_summary_df(mu_residual, hdi_prob, "mu", "mu_residual")
-    p_residual_summary = _build_parameter_summary_df(p_residual, hdi_prob, "p", "p_residual")
-    baf_outlier_summary = _build_parameter_summary_df(baf_outlier_df, hdi_prob, "baf_outlier", "baf_outlier_prob")
-    rdr_outlier_summary = _build_parameter_summary_df(rdr_outlier_df, hdi_prob, "rdr_outlier", "rdr_outlier_prob")
+    # p_df = iter_chain_df.join(p_df)
+    # mu_residual = iter_chain_df.join(mu_residual)
+    # p_residual = iter_chain_df.join(p_residual)
+    # rdr_outlier_df = iter_chain_df.join(rdr_outlier_df)
+    # baf_outlier_df = iter_chain_df.join(baf_outlier_df)
+
+    # p_summary = _build_parameter_summary_df(p_df, hdi_prob, "p", "p")
+    # mu_residual_summary = _build_parameter_summary_df(mu_residual, hdi_prob, "mu", "mu_residual")
+    # p_residual_summary = _build_parameter_summary_df(p_residual, hdi_prob, "p", "p_residual")
+    # baf_outlier_summary = _build_parameter_summary_df(baf_outlier_df, hdi_prob, "baf_outlier", "baf_outlier_prob")
+    # rdr_outlier_summary = _build_parameter_summary_df(rdr_outlier_df, hdi_prob, "rdr_outlier", "rdr_outlier_prob")
 
     result_df = mu_summary.join([mu_residual_summary, p_summary, p_residual_summary, baf_outlier_summary, rdr_outlier_summary])
-    add_bin_cols_to_summary_df(bins, result_df)
+    add_bin_cols_to_summary_df(data["bins"], result_df)
 
     result_df.to_csv(out_file, sep="\t")
+
+
+def _process_param_table(param_df, iter_chain_df, hdi_prob, param_name, col_prefix):
+    param_df = iter_chain_df.join(param_df)
+    mu_summary = _build_parameter_summary_df(param_df, hdi_prob, param_name, col_prefix)
+    return mu_summary
 
 
 def _compute_rdr_outlier_prob(p_df, samples_df, data):
