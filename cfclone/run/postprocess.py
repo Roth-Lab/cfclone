@@ -1,5 +1,6 @@
-import arviz
+import arviz as az
 import h5py
+import xarray as xr
 import numpy as np
 import pandas as pd
 
@@ -65,26 +66,20 @@ def write_prevalence_stats(in_file, out_file, hdi_prob=0.95, normal=False, renor
     data, samples_df, _ = _load_results(in_file)
 
     rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=normal, renormalise=renormalise)
+    out_df = _build_arviz_summary_df_long(rho_df, "rho", hdi_prob)
+    _define_hdi_upper_and_lower_cols(out_df, rename=True)
+    _rename_arviz_summary_mean_median_cols(out_df, "prevalence")
 
-    rho = rho_df[rho_cols].to_numpy()
-
-    hdi = arviz.hdi(rho.reshape((1, rho.shape[0], rho.shape[1])), hdi_prob=hdi_prob)
-
-    out_record = {
-        "mean_prevalence": rho_df[rho_cols].mean(axis=0),
-        "median_prevalence": rho_df[rho_cols].median(axis=0),
-        "lower_ci": hdi[:, 0],
-        "upper_ci": hdi[:, 1],
-    }
-
-    out_df = pd.DataFrame.from_records(
-        out_record,
-        columns=["mean_prevalence", "median_prevalence", "lower_ci", "upper_ci"],
-    )
     out_df.index = out_df.index.str.removeprefix("rho_")
     out_df.index.name = "clone_id"
 
     out_df.to_csv(out_file, sep="\t")
+
+
+def _rename_arviz_summary_mean_median_cols(df, suffix_to_add):
+    suffix_to_add = "_{}".format(suffix_to_add)
+    colmap = {"mean": "mean{}".format(suffix_to_add), "median": "median{}".format(suffix_to_add)}
+    df.rename(columns=colmap, inplace=True)
 
 
 def write_samples(in_file, out_file, compute_generated_quantities=True):
@@ -109,7 +104,7 @@ def write_tumour_content(in_file, out_file, hdi_prob=0.95):
 
     rho_df["tumour_content"] = 1 - rho_df[["rho_normal"]]
 
-    hdi = arviz.hdi(rho_df["tumour_content"].to_numpy(), hdi_prob=hdi_prob)
+    hdi = az.hdi(rho_df["tumour_content"].to_numpy(), hdi_prob=hdi_prob)
 
     out_record = {
         "mean": rho_df["tumour_content"].mean(),
@@ -269,3 +264,38 @@ def _should_renormalise(normal):
         renormalise = True
 
     return renormalise
+
+
+def _build_arviz_summary_df_long(df, varname, hdi_prob, drop_sd_col=True):
+    stats_funcs = {"median": np.median}
+    df = df.rename(columns={"iteration": "draw"})
+    df = df.set_index(["chain", "draw"])
+    xdata = xr.Dataset.from_dataframe(df)
+    az_dataset = az.InferenceData(posterior=xdata)
+    df_summary = az.summary(
+        az_dataset,
+        var_names=[varname],
+        kind="stats",
+        hdi_prob=hdi_prob,
+        round_to="none",
+        filter_vars="like",
+        extend=True,
+        stat_funcs=stats_funcs,
+    )
+    if drop_sd_col:
+        df_summary.drop(columns="sd", inplace=True)
+    return df_summary
+
+
+def _define_hdi_upper_and_lower_cols(df_summary, rename=True):
+    hdi_cols = {col: float(col[4:-1]) for col in df_summary.columns if col.startswith("hdi")}
+    hdi_col_names = list(hdi_cols.keys())
+    if hdi_cols[hdi_col_names[0]] < hdi_cols[hdi_col_names[1]]:
+        hdi_col_name_map = {hdi_col_names[0]: "lower_ci", hdi_col_names[1]: "upper_ci"}
+    else:
+        hdi_col_name_map = {hdi_col_names[1]: "lower_ci", hdi_col_names[0]: "upper_ci"}
+    if rename:
+        df_summary.rename(columns=hdi_col_name_map, inplace=True)
+    else:
+        for hdi_col, new_name in hdi_col_name_map.items():
+            df_summary[new_name] = df_summary[hdi_col]
