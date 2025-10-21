@@ -197,9 +197,7 @@ def write_dominance_prob(in_file, out_file, normal=False):
 
     prob_dom.rename(columns={"is_max": "dominance_prob"}, inplace=True)
 
-    prob_dom.index.name = "clone"
-
-    prob_dom.to_csv(out_file, sep="\t")
+    prob_dom.to_csv(out_file, index=False, sep="\t")
 
 
 def write_pairwise_ranks(in_file, out_file, normal=False):
