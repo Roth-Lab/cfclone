@@ -278,7 +278,7 @@ def write_samples(**kwargs):
     help="""Path where results will be written in TSV format.""",
 )
 def write_summary(**kwargs):
-    """Write the trace of all model parameters."""
+    """Write the summary of the MCMC analysis."""
     cfclone.run.write_summary(**kwargs)
 
 
