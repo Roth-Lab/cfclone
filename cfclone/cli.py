@@ -79,6 +79,13 @@ import cfclone.run
     help="""Number of rounds of PT to perform.""",
 )
 @click.option(
+    "--sex",
+    type=click.Choice(cfclone.run.SexType, case_sensitive=False),
+    default="female",
+    show_default=True,
+    help="""Sex of sample. Determines copy number of the normal population.""",
+)
+@click.option(
     "--use-clone",
     multiple=True,
     type=click.STRING,
@@ -91,6 +98,7 @@ import cfclone.run
 def fit(**kwargs):
     """Fit cfClone model to data."""
     cfclone.run.fit(**kwargs)
+
 
 @click.command(context_settings={"max_content_width": 120}, name="init")
 def initialise(**kwargs):
@@ -109,6 +117,7 @@ def initialise(**kwargs):
 def print_model_evidence(**kwargs):
     """Print the model evidence P(X|M)."""
     cfclone.run.print_model_evidence(**kwargs)
+
 
 @click.command(context_settings={"max_content_width": 120}, name="init")
 def initialise(**kwargs):

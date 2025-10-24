@@ -1,3 +1,4 @@
+import enum
 import os
 import random
 
@@ -9,6 +10,11 @@ from cfclone.inference import run_inference
 from cfclone.julia import setup_julia_module
 from cfclone.models import get_model
 from cfclone.run.initialise import set_env_variables
+
+
+class SexType(enum.Enum):
+    female = enum.auto()
+    male = enum.auto()
 
 
 def fit(
@@ -23,6 +29,7 @@ def fit(
     num_threads=1,
     only_normal=False,
     outlier=False,
+    sex=SexType.female,
     use_clone=(),
 ):
     bins, clones, data = load_data(
@@ -31,6 +38,7 @@ def fit(
         add_normal=add_normal,
         num_bins=num_bins,
         only_normal=only_normal,
+        sex=sex,
         use_clone=use_clone,
     )
 
@@ -96,7 +104,9 @@ def build_samples_df(clones, jl, pt):
     return samples_df
 
 
-def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None, only_normal=False, use_clone=()):
+def load_data(
+    clone_cnv_file, in_file, add_normal=True, num_bins=None, only_normal=False, sex=SexType.female, use_clone=()
+):
     df = pd.read_csv(in_file, sep="\t")
 
     _add_bin_name_col(df)
@@ -137,6 +147,16 @@ def load_data(clone_cnv_file, in_file, add_normal=True, num_bins=None, only_norm
 
         cn_b = _add_normal_clone(cn_b)
 
+    if sex == SexType.female:
+        cn_a.loc["normal", [x for x in cn_a.columns if x.split(":")[0].replace("chr", "") == "Y"]] = 0
+
+        cn_b.loc["normal", [x for x in cn_b.columns if x.split(":")[0].replace("chr", "") == "Y"]] = 0
+
+    else:
+        cn_a.loc["normal", [x for x in cn_a.columns if x.split(":")[0].replace("chr", "") in ["X", "Y"]]] = 1
+
+        cn_b.loc["normal", [x for x in cn_b.columns if x.split(":")[0].replace("chr", "") in ["X", "Y"]]] = 0
+
     if only_normal:
         cn_a = cn_a.loc[["normal"]]
 
@@ -168,7 +188,6 @@ def _add_bin_name_col(df):
 
 
 def _add_normal_clone(df):
-    #TODO: Deal with sex chromosomes properly
     clones = list(df.index)
     clones.append("normal")
     bins = df.columns
