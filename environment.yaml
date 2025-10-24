@@ -9,11 +9,11 @@ dependencies:
   - h5py
   - juliaup
   - make
+  - networkx
   - numpy
   - pandas
-  - tbb-devel
   - pyjuliacall>=0.9.22
   - pyjuliapkg
+  - tbb-devel
   - scipy
-  - networkx
   - scikit-bio
