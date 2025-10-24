@@ -157,6 +157,7 @@ def write_parameter_summaries(
     hdi_prob=0.95,
 ):
     data, samples_df, _ = _load_results(in_file)
+
     mu_df, p_df = _build_mu_and_p_dfs(data, samples_df)
 
     print("mu and p dataframes built\n")
@@ -164,11 +165,13 @@ def write_parameter_summaries(
     baf = data["a"] / data["d"]
 
     mu_residual = mu_df.rsub(data["rdr"])
+
     p_residual = p_df.rsub(baf)
 
     print("mu and p residuals computed\n")
 
     rdr_outlier_df = _compute_rdr_outlier_prob(p_df, samples_df, data)
+
     baf_outlier_df = _compute_baf_outlier_prob(mu_df, samples_df, data)
 
     print("RDR and BAF outlier probs computed\n")
@@ -182,6 +185,7 @@ def write_parameter_summaries(
         "mu",
         "mu",
     )
+
     p_summary = _process_param_table(
         p_df,
         iter_chain_df,
@@ -189,6 +193,7 @@ def write_parameter_summaries(
         "p",
         "p",
     )
+
     mu_residual_summary = _process_param_table(
         mu_residual,
         iter_chain_df,
@@ -196,6 +201,7 @@ def write_parameter_summaries(
         "mu",
         "mu_residual",
     )
+
     p_residual_summary = _process_param_table(
         p_residual,
         iter_chain_df,
@@ -203,6 +209,7 @@ def write_parameter_summaries(
         "p",
         "p_residual",
     )
+
     baf_outlier_summary = _process_param_table(
         baf_outlier_df,
         iter_chain_df,
@@ -210,6 +217,7 @@ def write_parameter_summaries(
         "baf_outlier",
         "baf_outlier_prob",
     )
+
     rdr_outlier_summary = _process_param_table(
         rdr_outlier_df,
         iter_chain_df,
@@ -228,7 +236,9 @@ def write_parameter_summaries(
         ]
     )
     result_df["data_rdr"] = data["rdr"]
+
     result_df["data_baf"] = baf
+
     _add_bin_cols_to_summary_df(data["bins"], result_df)
 
     result_df.to_csv(out_file, sep="\t")
@@ -236,21 +246,29 @@ def write_parameter_summaries(
 
 def _process_param_table(param_df, iter_chain_df, hdi_prob, param_name, col_prefix):
     param_df = iter_chain_df.join(param_df)
+
     mu_summary = _build_parameter_summary_df(param_df, hdi_prob, param_name, col_prefix)
+
     return mu_summary
 
 
-def _compute_rdr_outlier_prob(p_df, samples_df, data):
+def _compute_baf_outlier_prob(p_df, samples_df, data):
     p = p_df.to_numpy()
+
     w = samples_df["outlier_rate_rdr"].to_numpy()
+
     n = samples_df["non_binomiality"].to_numpy()[..., np.newaxis]
+
     data_a = data["a"]
+
     data_d = data["d"]
 
     a_tmp = p / n
+
     b_tmp = (1 - p) / n
 
     log_w = np.log(w)[..., np.newaxis]
+
     log_w_minus_1 = np.log1p(-w)[..., np.newaxis]
 
     beta_binom_ones = ss.betabinom.pmf(data_a, data_d, 1, 1)
@@ -261,20 +279,26 @@ def _compute_rdr_outlier_prob(p_df, samples_df, data):
 
     result = stacked[0] - log_sum_exp(stacked, axis=0)
 
+    result = np.exp(result)
+
     num_bins = p.shape[1]
-    rdr_outlier_df = pd.DataFrame(result, columns=["rdr_outlier.{}".format(i) for i in range(num_bins)])
-    return rdr_outlier_df
+
+    return pd.DataFrame(result, columns=["baf_outlier.{}".format(i) for i in range(num_bins)])
 
 
-def _compute_baf_outlier_prob(mu_df, samples_df, data):
+def _compute_rdr_outlier_prob(mu_df, samples_df, data):
     mu = mu_df.to_numpy()
+
     s = samples_df["sigma"].to_numpy()[..., np.newaxis]
+
     s_outlier = samples_df["sigma_outlier"].to_numpy()[..., np.newaxis]
+
     w = samples_df["outlier_rate_rdr"].to_numpy()
 
     data_rdr = data["rdr"]
 
     log_w = np.log(w)[..., np.newaxis]
+
     log_w_minus_1 = np.log1p(-w)[..., np.newaxis]
 
     s_outlier_pdf = ss.t.logpdf(data_rdr, 25, 0, s_outlier)
@@ -285,27 +309,40 @@ def _compute_baf_outlier_prob(mu_df, samples_df, data):
 
     result = stacked[0] - log_sum_exp(stacked, axis=0)
 
+    result = np.exp(result)
+
     num_bins = mu.shape[1]
-    baf_outlier_df = pd.DataFrame(result, columns=["baf_outlier.{}".format(i) for i in range(num_bins)])
-    return baf_outlier_df
+
+    return pd.DataFrame(result, columns=["rdr_outlier.{}".format(i) for i in range(num_bins)])
 
 
 def _add_bin_cols_to_summary_df(bins, df):
     df["bin_name"] = bins
+
     df[["chrom", "start", "end"]] = df["bin_name"].str.split(":", expand=True)
+
     df.drop(columns="bin_name", inplace=True)
 
 
 def _build_parameter_summary_df(df, hdi_prob, param_name, col_prefix):
     out_df = _build_arviz_summary_df_long(df, param_name, hdi_prob)
+
     print("{} summary dataframe built".format(col_prefix))
+
     _define_hdi_upper_and_lower_cols(out_df, rename=True)
+
     out_df.index = out_df.index.str.removeprefix("{}.".format(param_name))
+
     out_df.index.name = "bin_idx"
+
     out_df.index = pd.to_numeric(out_df.index, downcast="integer")
+
     out_df.sort_index(axis=0, inplace=True)
+
     out_df = out_df.add_prefix("{}_".format(col_prefix), axis=1)
+
     print("{} summary col processing complete\n".format(col_prefix))
+
     return out_df
 
 
@@ -544,26 +581,35 @@ def _create_mu_and_p_cols(data, samples_df):
 
 def _build_mu_and_p_dfs(data, samples_df):
     cn_t = data["cn_t"]
+
     cn_a = data["cn_a"]
+
     rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=True, renormalise=False, keep_cols="alpha")
 
     rho = rho_df[rho_cols].to_numpy()
+
     mean_clone_cn = np.mean(cn_t, axis=1)
+
     alpha = rho_df["alpha"].to_numpy()
+
     alpha = alpha[..., np.newaxis]
 
     rho_mat_cn_t = rho @ cn_t
 
     mu = rho_mat_cn_t * alpha
+
     mu /= np.matvec(rho, mean_clone_cn)[..., np.newaxis]
 
     p = rho @ cn_a
+
     p /= rho_mat_cn_t
 
     num_bins = cn_t.shape[1]
 
     mu_df = pd.DataFrame(mu, columns=["mu.{}".format(i) for i in range(num_bins)])
+
     p_df = pd.DataFrame(p, columns=["p.{}".format(i) for i in range(num_bins)])
+
     return mu_df, p_df
 
 
