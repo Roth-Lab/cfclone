@@ -1,12 +1,14 @@
+from scipy.special import logsumexp as log_sum_exp
+from skbio.tree import TreeNode
+
 import arviz as az
 import h5py
 import xarray as xr
+import networkx as nx
 import numpy as np
 import pandas as pd
-from scipy.special import logsumexp as log_sum_exp
 import scipy.stats as ss
-from skbio.tree import TreeNode
-import networkx as nx
+
 from .json_serialisation import serialise_networkx_tree_to_json
 
 
@@ -401,11 +403,15 @@ def write_prevalence_stats(in_file, out_file, hdi_prob=0.95, normal=False, renor
     data, samples_df, _ = _load_results(in_file)
 
     rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=normal, renormalise=renormalise)
+    
     out_df = _build_arviz_summary_df_long(rho_df, "rho", hdi_prob)
+    
     _define_hdi_upper_and_lower_cols(out_df, rename=True)
+    
     _rename_arviz_summary_mean_median_cols(out_df, "prevalence")
 
     out_df.index = out_df.index.str.removeprefix("rho_")
+    
     out_df.index.name = "clone_id"
 
     out_df.to_csv(out_file, sep="\t")
