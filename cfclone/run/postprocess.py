@@ -265,6 +265,8 @@ def _compute_baf_outlier_prob(p_df, samples_df, data):
 
     data_d = data["d"]
 
+    p = np.clip(p, 1e-6, 1 - 1e-6)
+
     a_tmp = p / n
 
     b_tmp = (1 - p) / n
@@ -403,15 +405,15 @@ def write_prevalence_stats(in_file, out_file, hdi_prob=0.95, normal=False, renor
     data, samples_df, _ = _load_results(in_file)
 
     rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=normal, renormalise=renormalise)
-    
+
     out_df = _build_arviz_summary_df_long(rho_df, "rho", hdi_prob)
-    
+
     _define_hdi_upper_and_lower_cols(out_df, rename=True)
-    
+
     _rename_arviz_summary_mean_median_cols(out_df, "prevalence")
 
     out_df.index = out_df.index.str.removeprefix("rho_")
-    
+
     out_df.index.name = "clone_id"
 
     out_df.to_csv(out_file, sep="\t")
