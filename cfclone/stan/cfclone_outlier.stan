@@ -44,7 +44,7 @@ model {
   rho ~ dirichlet(ones);
   alpha ~ gamma(1, 1);
   non_binomiality ~ beta(1, 100); // prior on relatively low non_binomiality
-  sigma ~ gamma(1, 100); // prior on scale of student-t set to low values 
+  sigma ~ gamma(1, 10); // prior on scale of student-t set to low values 
   sigma_outlier ~ gamma(1, 1); // prior on scale of student-t set to high values
   outlier_rate_rdr ~ beta(1, 100); // prior on outlier rate for RDR data is set to low values (expect few genomic bins to be outliers)
   outlier_rate_baf ~ beta(1, 100); // prior on outlier rate for BAF data is set to low values (expect few genomic bins to be outliers)
