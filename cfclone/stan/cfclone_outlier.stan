@@ -4,7 +4,7 @@ functions {
   }
   
   real rdr_lpdf(real rdr, real mu, real sigma, real sigma_outlier, real outlier_rate_rdr) {
-    return log_mix(outlier_rate_rdr, student_t_lpdf(rdr | 25, 0, sigma_outlier), student_t_lpdf(rdr | 25, mu, sigma));
+    return log_mix(outlier_rate_rdr, student_t_lpdf(rdr | 25, 1, sigma_outlier), student_t_lpdf(rdr | 25, mu, sigma));
   }
 }
 data {

@@ -305,7 +305,7 @@ def _compute_rdr_outlier_prob(mu_df, samples_df, data):
 
     log_w_minus_1 = np.log1p(-w)[..., np.newaxis]
 
-    s_outlier_pdf = ss.t.logpdf(data_rdr, 25, 0, s_outlier)
+    s_outlier_pdf = ss.t.logpdf(data_rdr, 25, 1, s_outlier)
 
     mu_s_pdf = ss.t.logpdf(data_rdr, 25, mu, s)
 
