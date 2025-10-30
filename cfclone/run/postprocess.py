@@ -172,9 +172,9 @@ def write_parameter_summaries(
 
     print("mu and p residuals computed\n")
 
-    rdr_outlier_df = _compute_rdr_outlier_prob(p_df, samples_df, data)
+    baf_outlier_odds_df, baf_outlier_prob_df = _compute_baf_outlier_prob(p_df, samples_df, data)
 
-    baf_outlier_df = _compute_baf_outlier_prob(mu_df, samples_df, data)
+    rdr_outlier_odds_df, rdr_outlier_prob_df = _compute_rdr_outlier_prob(mu_df, samples_df, data)
 
     print("RDR and BAF outlier probs computed\n")
 
@@ -212,16 +212,32 @@ def write_parameter_summaries(
         "p_residual",
     )
 
-    baf_outlier_summary = _process_param_table(
-        baf_outlier_df,
+    baf_outlier_odds_summary = _process_param_table(
+        baf_outlier_odds_df,
+        iter_chain_df,
+        hdi_prob,
+        "baf_outlier",
+        "baf_outlier_odds",
+    )
+
+    rdr_outlier_odds_summary = _process_param_table(
+        rdr_outlier_odds_df,
+        iter_chain_df,
+        hdi_prob,
+        "rdr_outlier",
+        "rdr_outlier_odds",
+    )
+
+    baf_outlier_prob_summary = _process_param_table(
+        baf_outlier_prob_df,
         iter_chain_df,
         hdi_prob,
         "baf_outlier",
         "baf_outlier_prob",
     )
 
-    rdr_outlier_summary = _process_param_table(
-        rdr_outlier_df,
+    rdr_outlier_prob_summary = _process_param_table(
+        rdr_outlier_prob_df,
         iter_chain_df,
         hdi_prob,
         "rdr_outlier",
@@ -233,8 +249,10 @@ def write_parameter_summaries(
             mu_residual_summary,
             p_summary,
             p_residual_summary,
-            baf_outlier_summary,
-            rdr_outlier_summary,
+            baf_outlier_odds_summary,
+            rdr_outlier_odds_summary,
+            baf_outlier_prob_summary,
+            rdr_outlier_prob_summary,
         ]
     )
     result_df["data_rdr"] = data["rdr"]
@@ -257,67 +275,77 @@ def _process_param_table(param_df, iter_chain_df, hdi_prob, param_name, col_pref
 def _compute_baf_outlier_prob(p_df, samples_df, data):
     p = p_df.to_numpy()
 
-    w = samples_df["outlier_rate_rdr"].to_numpy()
-
-    n = samples_df["non_binomiality"].to_numpy()[..., np.newaxis]
-
-    data_a = data["a"]
-
-    data_d = data["d"]
-
     p = np.clip(p, 1e-6, 1 - 1e-6)
 
-    a_tmp = p / n
+    w = samples_df["outlier_rate_rdr"].to_numpy()
 
-    b_tmp = (1 - p) / n
+    n = samples_df["non_binomiality"].to_numpy()
 
-    log_w = np.log(w)[..., np.newaxis]
+    outlier_odds = np.zeros(p.shape)
 
-    log_w_minus_1 = np.log1p(-w)[..., np.newaxis]
+    outlier_prob = np.zeros(p.shape)
 
-    beta_binom_ones = ss.betabinom.pmf(data_a, data_d, 1, 1)
+    temp = np.zeros((2, p.shape[1]))
 
-    beta_binom_a_b = ss.betabinom.pmf(data_a, data_d, a_tmp, b_tmp)
+    for i in range(p.shape[0]):
+        a = p[i] / n[i]
 
-    stacked = np.stack([log_w + beta_binom_ones, log_w_minus_1 + beta_binom_a_b])
+        b = (1 - p[i]) / n[i]
 
-    result = stacked[0] - log_sum_exp(stacked, axis=0)
+        temp[0] = np.log(w[i]) + ss.betabinom.pmf(data["a"], data["d"], 1, 1)
 
-    result = np.exp(result)
+        temp[1] = np.log1p(-w[i]) + ss.betabinom.pmf(data["a"], data["d"], a, b)
+
+        outlier_prob[i] = temp[0] - log_sum_exp(temp, axis=0)
+
+        outlier_odds[i] = outlier_prob[i] - np.log(w[i])
+
+    outlier_prob = np.exp(outlier_prob)
 
     num_bins = p.shape[1]
 
-    return pd.DataFrame(result, columns=["baf_outlier.{}".format(i) for i in range(num_bins)])
+    odds_df = pd.DataFrame(outlier_odds, columns=["baf_outlier.{}".format(i) for i in range(num_bins)])
+
+    prob_df = pd.DataFrame(outlier_prob, columns=["baf_outlier.{}".format(i) for i in range(num_bins)])
+
+    return odds_df, prob_df
 
 
 def _compute_rdr_outlier_prob(mu_df, samples_df, data):
     mu = mu_df.to_numpy()
 
-    s = samples_df["sigma"].to_numpy()[..., np.newaxis]
+    s = samples_df["sigma"].to_numpy()
 
-    s_outlier = samples_df["sigma_outlier"].to_numpy()[..., np.newaxis]
+    s_outlier = samples_df["sigma_outlier"].to_numpy()
 
     w = samples_df["outlier_rate_rdr"].to_numpy()
 
-    data_rdr = data["rdr"]
+    rdr = data["rdr"].astype(float)
 
-    log_w = np.log(w)[..., np.newaxis]
+    outlier_odds = np.zeros(mu.shape)
 
-    log_w_minus_1 = np.log1p(-w)[..., np.newaxis]
+    outlier_prob = np.zeros(mu.shape)
 
-    s_outlier_pdf = ss.t.logpdf(data_rdr, 25, 1, s_outlier)
+    temp = np.zeros((2, mu.shape[1]))
 
-    mu_s_pdf = ss.t.logpdf(data_rdr, 25, mu, s)
+    for i in range(mu.shape[0]):
+        temp[0] = np.log(w[i]) + ss.t.logpdf(rdr, 25, 1, s_outlier[i])
 
-    stacked = np.stack([log_w + s_outlier_pdf, log_w_minus_1 + mu_s_pdf])
+        temp[1] = np.log1p(-w[i]) + ss.t.logpdf(rdr, 25, mu[i], s[i])
 
-    result = stacked[0] - log_sum_exp(stacked, axis=0)
+        outlier_prob[i] = temp[0] - log_sum_exp(temp, axis=0)
 
-    result = np.exp(result)
+        outlier_odds[i] = outlier_prob[i] - np.log(w[i])
+
+    outlier_prob = np.exp(outlier_prob)
 
     num_bins = mu.shape[1]
 
-    return pd.DataFrame(result, columns=["rdr_outlier.{}".format(i) for i in range(num_bins)])
+    odds_df = pd.DataFrame(outlier_odds, columns=["rdr_outlier.{}".format(i) for i in range(num_bins)])
+
+    prob_df = pd.DataFrame(outlier_prob, columns=["rdr_outlier.{}".format(i) for i in range(num_bins)])
+
+    return odds_df, prob_df
 
 
 def _add_bin_cols_to_summary_df(bins, df):
