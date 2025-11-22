@@ -15,9 +15,9 @@ data {
   array[num_bins] int<lower=0> a;
   array[num_bins] int<lower=0> d;
   array[num_bins] real rdr;
+  vector[num_clones] pi;
 }
 transformed data {
-  vector[num_clones] ones = rep_vector(1.0, num_clones);
   vector[num_clones] mean_clone_cn;
   vector[num_bins] baf_outlier_dist;
   vector[num_bins] rdr_outlier_dist;
@@ -46,7 +46,7 @@ parameters {
   real<lower=0, upper=1> outlier_rate_baf; // probability a genomic bin is are considered outliers in the BAF data.
 }
 model {
-  rho ~ dirichlet(ones);
+  rho ~ dirichlet(pi);
   alpha ~ gamma(1, 1);
   non_binomiality ~ beta(1, 100); // prior on relatively low non_binomiality
   sigma ~ gamma(1, 100); // prior on scale of student-t set to low values 

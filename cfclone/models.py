@@ -25,8 +25,8 @@ def get_model(jl, data, use_outlier=True):
                     [Distributions.Gamma(1, 1),     # alpha
                     Distributions.Beta(1, 100),     # non_binomiality
                     Distributions.Gamma(1, 100),    # sigma
-                    Distributions.Beta(1, 100),    # outlier_rate_rdr
-                    Distributions.Beta(1, 100)]    # outlier_rate_baf
+                    Distributions.Beta(1, 100),     # outlier_rate_baf
+                    Distributions.Beta(1, 100)]     # outlier_rate_rdr
             )
             return DistributionLogPotential(product_distribution(transformed.(result)))
         end

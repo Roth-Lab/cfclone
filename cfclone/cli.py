@@ -79,6 +79,20 @@ import cfclone.run
     help="""Number of rounds of PT to perform.""",
 )
 @click.option(
+    "--pi-normal",
+    default=10,
+    show_default=True,
+    type=click.FloatRange(0),
+    help="""Dirichlet prior parameter for normal population.""",
+)
+@click.option(
+    "--pi-tumour",
+    default=0.1,
+    show_default=True,
+    type=click.FloatRange(0),
+    help="""Dirichlet prior parameter for tumour populations.""",
+)
+@click.option(
     "--sex",
     type=click.Choice(cfclone.run.SexType, case_sensitive=False),
     default="female",

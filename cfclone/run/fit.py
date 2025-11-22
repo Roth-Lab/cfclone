@@ -27,14 +27,22 @@ def fit(
     num_chains_vi=5,
     num_rounds=10,
     num_threads=1,
+    pi_normal=10,
+    pi_tumour=0.1,
     only_normal=False,
     outlier=False,
     sex=SexType.female,
     use_clone=(),
 ):
+    priors = {
+        "pi_normal": pi_normal,
+        "pi_tumour": pi_tumour,
+    }
+
     bins, clones, data = load_data(
         clone_cnv_file,
         in_file,
+        priors,
         add_normal=add_normal,
         num_bins=num_bins,
         only_normal=only_normal,
@@ -105,7 +113,7 @@ def build_samples_df(clones, jl, pt):
 
 
 def load_data(
-    clone_cnv_file, in_file, add_normal=True, num_bins=None, only_normal=False, sex=SexType.female, use_clone=()
+    clone_cnv_file, in_file, priors, add_normal=True, num_bins=None, only_normal=False, sex=SexType.female, use_clone=()
 ):
     df = pd.read_csv(in_file, sep="\t")
 
@@ -179,6 +187,11 @@ def load_data(
         "d": d.to_numpy(),
         "rdr": rdr.to_numpy(),
     }
+
+    data["pi"] = priors["pi_tumour"] * np.ones(data["num_clones"])
+
+    if add_normal:
+        data["pi"][-1] = priors["pi_normal"]
 
     return bins, clones, data
 
