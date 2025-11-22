@@ -316,8 +316,6 @@ def _compute_rdr_outlier_prob(mu_df, samples_df, data):
 
     s = samples_df["sigma"].to_numpy()
 
-    s_outlier = samples_df["sigma_outlier"].to_numpy()
-
     w = samples_df["outlier_rate_rdr"].to_numpy()
 
     rdr = data["rdr"].astype(float)
@@ -329,7 +327,7 @@ def _compute_rdr_outlier_prob(mu_df, samples_df, data):
     temp = np.zeros((2, mu.shape[1]))
 
     for i in range(mu.shape[0]):
-        temp[0] = np.log(w[i]) + ss.t.logpdf(rdr, 25, 1, s_outlier[i])
+        temp[0] = np.log(w[i]) + ss.t.logpdf(rdr, 4, 1, 1)
 
         temp[1] = np.log1p(-w[i]) + ss.t.logpdf(rdr, 25, mu[i], s[i])
 
