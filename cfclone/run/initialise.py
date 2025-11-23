@@ -69,6 +69,7 @@ def _get_toy_data():
         "a": a,
         "d": d,
         "rdr": rdr,
+        "pi": np.ones(K),
     }
 
     return data
