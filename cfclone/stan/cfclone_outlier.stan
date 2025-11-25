@@ -28,7 +28,7 @@ transformed data {
     mean_clone_cn[k] = s / num_bins;
   }
   for (i in 1 : num_bins){
-    baf_outlier_dist[i] = beta_binomial_lpmf(a[i] | d, 1., 1.);
+    baf_outlier_dist[i] = beta_binomial_lpmf(a[i] | d[i], 1., 1.);
     rdr_outlier_dist[i] = student_t_lpdf(rdr[i] | 4, 1, 1);
   }
 }
