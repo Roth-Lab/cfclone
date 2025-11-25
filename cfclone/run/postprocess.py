@@ -277,7 +277,7 @@ def _compute_baf_outlier_prob(p_df, samples_df, data):
 
     p = np.clip(p, 1e-6, 1 - 1e-6)
 
-    w = samples_df["outlier_rate_rdr"].to_numpy()
+    w = samples_df["outlier_rate_baf"].to_numpy()
 
     n = samples_df["non_binomiality"].to_numpy()
 
