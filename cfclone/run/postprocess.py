@@ -292,9 +292,9 @@ def _compute_baf_outlier_prob(p_df, samples_df, data):
 
         b = (1 - p[i]) / n[i]
 
-        temp[0] = np.log(w[i]) + ss.betabinom.pmf(data["a"], data["d"], 1, 1)
+        temp[0] = np.log(w[i]) + ss.betabinom.logpmf(data["a"], data["d"], 1, 1)
 
-        temp[1] = np.log1p(-w[i]) + ss.betabinom.pmf(data["a"], data["d"], a, b)
+        temp[1] = np.log1p(-w[i]) + ss.betabinom.logpmf(data["a"], data["d"], a, b)
 
         outlier_prob[i] = temp[0] - log_sum_exp(temp, axis=0)
 
