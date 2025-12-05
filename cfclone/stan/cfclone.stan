@@ -6,9 +6,9 @@ data {
   array[num_bins] int<lower=0> a;
   array[num_bins] int<lower=0> d;
   array[num_bins] real rdr;
+  vector[num_clones] pi;
 }
 transformed data {
-  vector[num_clones] ones = rep_vector(1.0, num_clones);
   vector[num_clones] mean_clone_cn;
   for (k in 1 : num_clones) {
     real s = 0;
@@ -27,7 +27,7 @@ parameters {
   real<lower=1e-6> sigma;
 }
 model {
-  rho ~ dirichlet(ones);
+  rho ~ dirichlet(pi);
   alpha ~ gamma(1, 1);
   non_binomiality ~ beta(1, 100); // prior on relatively low non_binomiality
   sigma ~ gamma(1, 100); // prior on scale of student-t set to low values 
