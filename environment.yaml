@@ -2,7 +2,11 @@ name: cfclone
 channels:
   - conda-forge
 dependencies:
+<<<<<<< HEAD
   - python=3.12
+=======
+  - python<=3.12
+>>>>>>> a9c9005fcb795c5482af66237d7e622be33338e5
   - arviz
   - click>=8.0
   - cxx-compiler
