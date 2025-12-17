@@ -23,7 +23,7 @@ import cfclone.run
     "--out-file",
     required=True,
     type=click.Path(resolve_path=True),
-    help="""Path to where results will be written in HDF5 format.""",
+    help="""Path to file where results will be written in HDF5 format.""",
 )
 @click.option(
     "-t",
@@ -38,6 +38,14 @@ import cfclone.run
     default=True,
     show_default=True,
     help="""Whether to add a a CNV profile for normal heterozyogus diploid cells.""",
+)
+@click.option(
+    "--exec-dir",
+    type=click.Path(resolve_path=True),
+    help="""
+    Path to directory where additional sampler info will be saved.
+    This flag must be set if using the `resume` or `write-report` commands.
+    """,
 )
 @click.option(
     "--only-normal",
@@ -91,6 +99,13 @@ import cfclone.run
     show_default=True,
     type=click.FloatRange(0),
     help="""Dirichlet prior parameter for tumour populations.""",
+)
+@click.option(
+    "--seed",
+    default=None,
+    show_default=True,
+    type=click.IntRange(0),
+    help="""Random seed to reproduce results. If not set then a random value is used.""",
 )
 @click.option(
     "--sex",

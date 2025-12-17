@@ -22,6 +22,7 @@ def fit(
     in_file,
     out_file,
     add_normal=True,
+    exec_dir=None,
     num_bins=None,
     num_chains=12,
     num_chains_vi=5,
@@ -31,6 +32,7 @@ def fit(
     pi_tumour=0.1,
     only_normal=False,
     outlier=False,
+    seed=None,
     sex=SexType.female,
     use_clone=(),
 ):
@@ -39,10 +41,13 @@ def fit(
         "pi_tumour": pi_tumour,
     }
 
+    rng = np.random.default_rng(seed)
+
     bins, clones, data = load_data(
         clone_cnv_file,
         in_file,
         priors,
+        rng,
         add_normal=add_normal,
         num_bins=num_bins,
         only_normal=only_normal,
@@ -62,12 +67,17 @@ def fit(
 
     model = get_model(jl, data, use_outlier=outlier)
 
+    pt_seed = rng.integers(int(1e8))
+
     pt = run_inference(
         jl,
         model,
+        pt_seed,
+        exec_dir=exec_dir,
         num_chains=num_chains,
         num_chains_vi=num_chains_vi,
         num_rounds=num_rounds,
+        num_threads=num_threads,
     )
 
     samples_df = build_samples_df(clones, jl, pt)
@@ -95,6 +105,17 @@ def fit(
         dset = fh.create_dataset("/results/summary", data=summary_df.to_numpy(), dtype=np.float64)
         dset.attrs["columns"] = [str(x) for x in summary_df.columns]
 
+    if exec_dir is not None:
+        build_report = jl.seval(
+            """
+        function build_report(exec_folder, pt; interval_probability=0.95)
+            report(pt; exec_folder,  interval_probability, view=false)
+        end
+        """
+        )
+
+        build_report(exec_dir, pt)
+
 
 def build_summary_df(jl, pt):
     summary_df = jl.PythonCall.pytable(pt.shared.reports.summary)
@@ -113,7 +134,15 @@ def build_samples_df(clones, jl, pt):
 
 
 def load_data(
-    clone_cnv_file, in_file, priors, add_normal=True, num_bins=None, only_normal=False, sex=SexType.female, use_clone=()
+    clone_cnv_file,
+    in_file,
+    priors,
+    rng,
+    add_normal=True,
+    num_bins=None,
+    only_normal=False,
+    sex=SexType.female,
+    use_clone=(),
 ):
     df = pd.read_csv(in_file, sep="\t")
 
@@ -129,7 +158,7 @@ def load_data(
     )["bin_name"]
 
     if num_bins is not None and num_bins <= len(bins):
-        bins = random.sample(list(bins), num_bins)
+        bins = rng.choice(list(bins), size=num_bins, replace=False)
 
     a = df.set_index("bin_name").loc[bins, "a"]
 
