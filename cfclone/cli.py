@@ -105,7 +105,8 @@ import cfclone.run
     default=None,
     show_default=True,
     type=click.IntRange(0),
-    help="""Random seed to reproduce results. If not set then a random value is used.""",
+    help="""Random seed to reproduce results. 
+    If not set then a random value is used.""",
 )
 @click.option(
     "--sex",
