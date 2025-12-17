@@ -148,13 +148,6 @@ def print_model_evidence(**kwargs):
     """Print the model evidence P(X|M)."""
     cfclone.run.print_model_evidence(**kwargs)
 
-
-@click.command(context_settings={"max_content_width": 120}, name="init")
-def initialise(**kwargs):
-    """Setup Julia environment for cfClone."""
-    cfclone.run.initialise(**kwargs)
-
-
 @click.command(context_settings={"max_content_width": 120}, name="write-dominance-prob")
 @click.option(
     "-i",
