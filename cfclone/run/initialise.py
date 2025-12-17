@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 from cfclone.inference import run_inference
-from cfclone.julia import setup_julia_module
+from cfclone.julia import set_env_variables, setup_julia_module
 from cfclone.models import get_model
 
 
@@ -32,14 +32,6 @@ def initialise():
         num_chains_vi=5,
         num_rounds=2,
     )
-
-
-def set_env_variables():
-    # TODO: TBB_CXX_TYPE might need to be either clang or gcc,
-    #  we should have a function to grab uname to determine OS, something something MacOS
-    os.environ["TBB_CXX_TYPE"] = "gcc"
-    os.environ["TBB_INTERFACE_NEW"] = "new"
-    os.environ["STAN_THREADS"] = "true"
 
 
 def _get_toy_data():

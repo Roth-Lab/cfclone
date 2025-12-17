@@ -7,9 +7,8 @@ import numpy as np
 import pandas as pd
 
 from cfclone.inference import run_inference
-from cfclone.julia import setup_julia_module
+from cfclone.julia import set_env_variables, setup_julia_module
 from cfclone.models import get_model
-from cfclone.run.initialise import set_env_variables
 
 
 class SexType(enum.Enum):
