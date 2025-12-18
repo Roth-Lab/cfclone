@@ -19,6 +19,7 @@ def initialise():
     pt = run_inference(
         jl,
         model,
+        0,
         num_chains=5,
         num_chains_vi=5,
         num_rounds=2,
@@ -28,6 +29,7 @@ def initialise():
     pt = run_inference(
         jl,
         model,
+        0,
         num_chains=5,
         num_chains_vi=5,
         num_rounds=2,
