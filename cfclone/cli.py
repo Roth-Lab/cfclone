@@ -44,7 +44,6 @@ import cfclone.run
     type=click.Path(resolve_path=True),
     help="""
     Path to directory where additional sampler info will be saved.
-    This flag must be set if using the `resume` or `write-report` commands.
     """,
 )
 @click.option(
