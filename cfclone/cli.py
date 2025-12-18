@@ -40,11 +40,12 @@ import cfclone.run
     help="""Whether to add a a CNV profile for normal heterozyogus diploid cells.""",
 )
 @click.option(
+    "-e",
     "--exec-dir",
     type=click.Path(resolve_path=True),
     help="""
     Path to directory where additional sampler info will be saved.
-    This flag must be set if using the `resume` or `write-report` commands.
+    This flag must be set if you intend to the `resume` command.
     """,
 )
 @click.option(
@@ -134,6 +135,49 @@ def fit(**kwargs):
 def initialise(**kwargs):
     """Setup Julia environment for cfClone."""
     cfclone.run.initialise(**kwargs)
+
+
+@click.command(context_settings={"max_content_width": 120}, name="resume")
+@click.option(
+    "-e",
+    "--exec-dir",
+    required=True,
+    type=click.Path(exists=True, resolve_path=True),
+    help="""Path to directory where additional sampler was saved from previous call of `fit` or `resume`.""",
+)
+@click.option(
+    "-f",
+    "--fit-file",
+    required=True,
+    type=click.Path(exists=True, resolve_path=True),
+    help="""The HDF5 results file output by the `fit` command.""",
+)
+@click.option(
+    "-o",
+    "--out-file",
+    required=True,
+    type=click.Path(resolve_path=True),
+    help="""Path were updated results will be written in HDF5 format.""",
+)
+@click.option(
+    "-r",
+    "--num-rounds",
+    default=1,
+    show_default=True,
+    type=click.IntRange(1),
+    help="""Number of additional rounds of sampling to perform.""",
+)
+@click.option(
+    "-t",
+    "--num-threads",
+    default=1,
+    show_default=True,
+    type=click.IntRange(1),
+    help="""Number of threads to use.""",
+)
+def resume(**kwargs):
+    """Resume a previous analysis and perform additional sampling round."""
+    cfclone.run.resume(**kwargs)
 
 
 @click.command(context_settings={"max_content_width": 120}, name="print-model-evidence")
@@ -427,6 +471,7 @@ def main():
 
 main.add_command(fit)
 main.add_command(initialise)
+main.add_command(resume)
 main.add_command(print_model_evidence)
 main.add_command(write_dominance_prob)
 main.add_command(write_pairwise_ranks)
