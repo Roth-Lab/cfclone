@@ -1,5 +1,6 @@
 import enum
 import os
+import pathlib
 import random
 
 import h5py
@@ -108,12 +109,22 @@ def fit(
         build_report = jl.seval(
             """
         function build_report(exec_folder, pt; interval_probability=0.95)
-            report(pt; exec_folder,  interval_probability, view=false)
+            report(pt; exec_folder,  interval_probability, max_dim=50, view=false)
         end
         """
         )
 
         build_report(exec_dir, pt)
+
+        exec_dir_path = pathlib.Path(exec_dir)
+
+        raw_report_path = exec_dir_path.joinpath("build", "index.html")
+
+        report_path = exec_dir_path.joinpath("report.html")
+
+        report_path.unlink(missing_ok=True)
+
+        report_path.symlink_to(raw_report_path)
 
 
 def build_summary_df(jl, pt):
