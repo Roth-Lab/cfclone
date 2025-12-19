@@ -34,6 +34,7 @@ def fit(
     outlier=False,
     seed=None,
     sex=SexType.female,
+    slice_sampling=None,
     use_clone=(),
 ):
     priors = {
@@ -78,6 +79,7 @@ def fit(
         num_chains_vi=num_chains_vi,
         num_rounds=num_rounds,
         num_threads=num_threads,
+        slice_sampling=slice_sampling,
     )
 
     samples_df = build_samples_df(clones, jl, pt)

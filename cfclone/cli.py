@@ -115,6 +115,17 @@ import cfclone.run
     help="""Sex of sample. Determines copy number of the normal population.""",
 )
 @click.option(
+    "--slice-sampling",
+    type=click.Choice(["compose", "mixture", "only"], case_sensitive=False),
+    default=None,
+    show_default=True,
+    help="""
+    If and how to use slice sampling.
+    By default slice sampling is not used.
+    Choices: `compose` - Run one round of slice sampling and MALA at each step. `mixture` - Randomly choose to slice sample or use MALA for each step. `only` - Only use slice sampling with no MALA.
+    """,
+)
+@click.option(
     "--use-clone",
     multiple=True,
     type=click.STRING,

@@ -1,10 +1,33 @@
-def run_inference(jl, model, seed, exec_dir=None, num_chains=12, num_chains_vi=5, num_rounds=10, num_threads=1):
+def run_inference(
+    jl,
+    model,
+    seed,
+    exec_dir=None,
+    num_chains=12,
+    num_chains_vi=5,
+    num_rounds=10,
+    num_threads=1,
+    slice_sampling=None,
+):
+    match slice_sampling:
+        case "compose":
+            explorer = jl.seval("Compose(AutoMALA(), SliceSampler())")
+
+        case "mixture":
+            explorer = jl.seval("Mix(AutoMALA(), SliceSampler())")
+
+        case "only":
+            explorer = jl.seval("SliceSampler()")
+
+        case _:
+            explorer = jl.seval("AutoMALA()")
+
     get_inputs = jl.seval(
         """
-    function get_inputs(reference, target; checkpoint=false, multithreaded=false, n_chains=12, n_chains_variational=5, n_rounds=10, seed=0)
+    function get_inputs(explorer, reference, target; checkpoint=false, multithreaded=false, n_chains=12, n_chains_variational=5, n_rounds=10, seed=0)
         return Inputs(
             checkpoint=checkpoint,
-            explorer=AutoMALA(),
+            explorer=explorer,
             multithreaded=multithreaded,
             n_chains=n_chains,
             n_chains_variational=n_chains_variational,
@@ -26,6 +49,7 @@ def run_inference(jl, model, seed, exec_dir=None, num_chains=12, num_chains_vi=5
     )
 
     inputs = get_inputs(
+        explorer,
         model.reference,
         model.target,
         checkpoint=(exec_dir is not None),
