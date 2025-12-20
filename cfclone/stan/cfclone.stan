@@ -20,7 +20,7 @@ transformed data {
 parameters {
   // warning: order of these parameters should not be changed
   simplex[num_clones] rho;
-  real<lower=0> alpha;
+  real<lower=1e-6> alpha;
   
   // to avoid numerical issues, the following parameters should not take tiny values
   real<lower=1e-6, upper=1> non_binomiality; // as ->0, we converge to binomial, higher values relaxes the binomial assumption
