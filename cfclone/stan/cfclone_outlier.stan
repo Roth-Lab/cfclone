@@ -42,8 +42,8 @@ parameters {
   real<lower=1e-6> sigma;
   
   // // these, on the other hand, are numerically stable even close to the boundaries [0, 1]
+  real<lower=1e-6, upper=1> outlier_rate_baf; // probability a genomic bin is are considered outliers in the BAF data.  
   real<lower=1e-6, upper=1> outlier_rate_rdr; // probability a genomic bin is are considered outliers in the RDR data.
-  real<lower=1e-6, upper=1> outlier_rate_baf; // probability a genomic bin is are considered outliers in the BAF data.
 }
 model {
   rho ~ dirichlet(pi);
