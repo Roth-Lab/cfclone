@@ -1,3 +1,13 @@
+import enum
+
+
+class SliceSamplingType(enum.Enum):
+    disable = enum.auto()
+    compose = enum.auto()
+    mixture = enum.auto()
+    only = enum.auto()
+
+
 def run_inference(
     jl,
     model,
@@ -10,17 +20,17 @@ def run_inference(
     slice_sampling=None,
 ):
     match slice_sampling:
-        case "compose":
+        case SliceSamplingType.disable:
+            explorer = jl.seval("AutoMALA()")
+
+        case SliceSamplingType.compose:
             explorer = jl.seval("Compose(AutoMALA(), SliceSampler())")
 
-        case "mixture":
+        case SliceSamplingType.mixture:
             explorer = jl.seval("Mix(AutoMALA(), SliceSampler())")
 
-        case "only":
+        case SliceSamplingType.only:
             explorer = jl.seval("SliceSampler()")
-
-        case _:
-            explorer = jl.seval("AutoMALA()")
 
     get_inputs = jl.seval(
         """

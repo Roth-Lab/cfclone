@@ -1,5 +1,7 @@
 import click
 
+from cfclone.inference import SliceSamplingType
+
 import cfclone.run
 
 
@@ -116,13 +118,11 @@ import cfclone.run
 )
 @click.option(
     "--slice-sampling",
-    type=click.Choice(["compose", "mixture", "only"], case_sensitive=False),
-    default=None,
+    type=click.Choice(SliceSamplingType, case_sensitive=False),
+    default=SliceSamplingType.mixture,
     show_default=True,
     help="""
     If and how to use slice sampling.
-    By default slice sampling is not used.
-    Choices: `compose` - Run one round of slice sampling and MALA at each step. `mixture` - Randomly choose to slice sample or use MALA for each step. `only` - Only use slice sampling with no MALA.
     """,
 )
 @click.option(
