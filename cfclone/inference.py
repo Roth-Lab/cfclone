@@ -17,7 +17,7 @@ def run_inference(
     num_chains_vi=5,
     num_rounds=10,
     num_threads=1,
-    slice_sampling=None,
+    slice_sampling=SliceSamplingType.disable,
 ):
     match slice_sampling:
         case SliceSamplingType.disable:
