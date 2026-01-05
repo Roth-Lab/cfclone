@@ -1,6 +1,6 @@
 import click
 
-from cfclone.inference import SliceSamplingType
+from cfclone.julia import SliceSamplingType
 
 import cfclone.run
 

@@ -1,38 +1,32 @@
 import os
-
-# import juliapkg
 import numpy as np
 
-from cfclone.inference import run_inference
-from cfclone.julia import set_env_variables, setup_julia_module
-from cfclone.models import get_model
+from cfclone.julia import run_inference, setup_julia_module
 
 
 def initialise():
-    set_env_variables()
-
     data = _get_toy_data()
 
     jl = setup_julia_module()
 
-    model = get_model(jl, data, use_outlier=False)
     pt = run_inference(
         jl,
-        model,
+        data,
         0,
         num_chains=5,
         num_chains_vi=5,
         num_rounds=2,
+        use_outlier=False,
     )
 
-    model = get_model(jl, data, use_outlier=True)
     pt = run_inference(
         jl,
-        model,
+        data,
         0,
         num_chains=5,
         num_chains_vi=5,
         num_rounds=2,
+        use_outlier=True,
     )
 
 

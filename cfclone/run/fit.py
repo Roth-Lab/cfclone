@@ -7,9 +7,7 @@ import h5py
 import numpy as np
 import pandas as pd
 
-from cfclone.inference import run_inference
-from cfclone.julia import set_env_variables, setup_julia_module
-from cfclone.models import get_model
+from cfclone.julia import run_inference, setup_julia_module
 
 
 class SexType(enum.Enum):
@@ -58,21 +56,13 @@ def fit(
 
     print(clones)
 
-    set_env_variables()
-
-    os.environ["PYTHON_JULIACALL_THREADS"] = f"{num_threads}"
-
-    jl = setup_julia_module()
-
-    print("\nUsing {} threads\n".format(jl.Threads.nthreads()))
-
-    model = get_model(jl, data, use_outlier=outlier)
+    jl = setup_julia_module(num_threads=num_threads)
 
     pt_seed = rng.integers(int(1e8))
 
     pt = run_inference(
         jl,
-        model,
+        data,
         pt_seed,
         exec_dir=exec_dir,
         num_chains=num_chains,
@@ -80,6 +70,7 @@ def fit(
         num_rounds=num_rounds,
         num_threads=num_threads,
         slice_sampling=slice_sampling,
+        use_outlier=outlier,
     )
 
     samples_df = build_samples_df(clones, jl, pt)
