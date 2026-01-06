@@ -3,11 +3,13 @@ using ADTypes,
     BridgeStan,
     Distributions,
     DynamicPPL,
+    LinearAlgebra,
     InferenceReport,
     JSON,
     MCMCChains,
     Pigeons,
     PythonCall,
+    Random,
     ReverseDiff
 
 # Reference distributions
@@ -51,8 +53,17 @@ function build_target(data, stan_model_file)
 end
 
 # Custom samplers
+## Pair reweight sampler
 @kwdef struct ClonePairReweightSampler
+    idxs::Array{Integer}
     num_scans = 100
+end
+
+function ClonePairReweightSampler(lp::StanLogPotential)
+    model = Pigeons.stan_model(lp)
+    names = BridgeStan.param_names(model)
+    idxs = findall(x -> occursin("rho", x), names)
+    return ClonePairReweightSampler(idxs, 100)
 end
 
 function Pigeons.step!(explorer::ClonePairReweightSampler, replica, shared)
@@ -60,20 +71,18 @@ function Pigeons.step!(explorer::ClonePairReweightSampler, replica, shared)
     rng = replica.rng
     log_potential = Pigeons.find_log_potential(replica, shared.tempering, shared)
     model = Pigeons.stan_model(log_potential)
-    names = BridgeStan.param_names(model)
-    idxs = findall(x -> occursin("rho", x), names)
     log_p = log_potential(state)
     for i in 1:explorer.num_scans
         # Propose a swap
         unc_params_old = state.unconstrained_parameters
         params = BridgeStan.param_constrain(model, unc_params_old)
-        u, v = sample(rng, idxs, 2; replace=false)
+        u, v = sample(rng, explorer.idxs, 2; replace=false)
         w = rand(rng, Float64)
         temp_u = params[u]
         temp_v = params[v]
         params[u] = (1 - w) * temp_u
         params[v] = w * temp_u + temp_v
-        params[idxs] = params[idxs] ./ sum(params[idxs])
+        params[explorer.idxs] = params[explorer.idxs] ./ sum(params[explorer.idxs])
         unc_params_new = BridgeStan.param_unconstrain(model, params)
         state.unconstrained_parameters = unc_params_new
         log_p_new = log_potential(state)
@@ -86,8 +95,47 @@ function Pigeons.step!(explorer::ClonePairReweightSampler, replica, shared)
     end
 end
 
+## Rho MH sampler
+@kwdef struct PrevalenceRWMHSampler
+    idxs::Array{Integer}
+    num_dims::Integer
+    num_scans = 100
+end
+
+function PrevalenceRWMHSampler(lp::StanLogPotential)
+    model = Pigeons.stan_model(lp)
+    names = BridgeStan.param_unc_names(model)
+    idxs = findall(x -> occursin("rho", x), names)
+    num_dims = length(idxs)
+    return PrevalenceRWMHSampler(idxs, num_dims, 100)
+end
+
+function Pigeons.step!(explorer::PrevalenceRWMHSampler, replica, shared)
+    state = replica.state
+    rng = replica.rng
+    log_potential = Pigeons.find_log_potential(replica, shared.tempering, shared)
+    log_p = log_potential(state)
+    for i in 1:explorer.num_scans
+        params_old = state.unconstrained_parameters[explorer.idxs]
+        proposal = MvNormal(params_old, 0.1 * Diagonal(ones(explorer.num_dims)))
+        params_new = rand(rng, proposal)
+        state.unconstrained_parameters[explorer.idxs] = params_new
+        log_p_new = log_potential(state)
+        log_q_new = logpdf(proposal, params_new)
+        proposal = MvNormal(params_new, 0.1 * Diagonal(ones(explorer.num_dims)))
+        log_q_old = logpdf(proposal, params_old)
+        accept_ratio = exp((log_p_new - log_q_new) - (log_p - log_q_old))
+        if accept_ratio < 1 && rand(rng) > accept_ratio
+            state.unconstrained_parameters[explorer.idxs] = params_old
+        else
+            log_p = log_p_new
+        end
+    end
+end
+
+## Slice sampler
 mutable struct MySliceSampler
-    idxs::Array{Int}
+    idxs::Array{Integer}
     slice_sampler::Pigeons.SliceSampler
 end
 
@@ -106,13 +154,15 @@ function Pigeons.step!(explorer::MySliceSampler, replica, shared)
     end
 end
 
-function slice_sample!(h::MySliceSampler, state::AbstractVector, log_potential, cached_lp, replica)
+function slice_sample!(explorer::MySliceSampler, state::AbstractVector, log_potential, cached_lp, replica)
+    rng = replica.rng
     cached_lp = Pigeons.cached_log_potential(log_potential, replica.state, cached_lp) # note: we pass `replica.state` instead of `state` in case the latter is the vector version of a non-vector state (e.g. stan and dppl models)
-
     # iterate over coordinates
-    for c in shuffle(h.idxs)
+    for c in shuffle(rng, explorer.idxs)
         pointer = Ref(state, c)
-        cached_lp = Pigeons.slice_sample_coord!(h.slice_sampler, replica, pointer, log_potential, cached_lp, typeof(pointer[])) # note: when state is mixed, pointer is RefArray{generic common type} for all coordinates, so can't use it to dispatch 
+        cached_lp = Pigeons.slice_sample_coord!(
+            explorer.slice_sampler, replica, pointer, log_potential, cached_lp, typeof(pointer[])
+        ) # note: when state is mixed, pointer is RefArray{generic common type} for all coordinates, so can't use it to dispatch 
 
         # check we still have a healthy state
         if !isfinite(cached_lp)

@@ -66,7 +66,7 @@ def run_inference(
 
     model = get_model(jl, data, use_outlier=use_outlier)
 
-    explorer = jl.seval("x -> Compose(MySliceSampler(x), ClonePairReweightSampler())")(model.target)
+    explorer = jl.seval("x -> Compose(MySliceSampler(x), Mix(ClonePairReweightSampler(x), PrevalenceRWMHSampler(x)))")(model.target)
 
     # explorer = jl.seval("x -> MySliceSampler(x)")(model.target)
 
