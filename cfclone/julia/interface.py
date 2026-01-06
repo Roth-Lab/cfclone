@@ -62,11 +62,15 @@ def run_inference(
     #     case SliceSamplingType.only:
     #         explorer = jl.seval("SliceSampler()")
 
-    explorer = jl.seval("Mix(ClonePairReweightSampler(), SliceSampler())")
-
     # explorer = jl.seval("SliceSampler()")
 
     model = get_model(jl, data, use_outlier=use_outlier)
+
+    explorer = jl.seval("x -> Compose(MySliceSampler(x), ClonePairReweightSampler())")(model.target)
+
+    # explorer = jl.seval("x -> MySliceSampler(x)")(model.target)
+
+    # get_explorer = jl.seval("x -> ClonePairReweightSampler()")
 
     inputs = jl.get_inputs(
         explorer,

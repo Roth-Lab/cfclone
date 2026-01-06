@@ -86,6 +86,51 @@ function Pigeons.step!(explorer::ClonePairReweightSampler, replica, shared)
     end
 end
 
+mutable struct MySliceSampler
+    idxs::Array{Int}
+    slice_sampler::Pigeons.SliceSampler
+end
+
+function MySliceSampler(lp::StanLogPotential)
+    model = Pigeons.stan_model(lp)
+    names = BridgeStan.param_unc_names(model)
+    idxs = findall(x -> !occursin("rho", x), names)
+    return MySliceSampler(idxs, Pigeons.SliceSampler())
+end
+
+function Pigeons.step!(explorer::MySliceSampler, replica, shared)
+    log_potential = Pigeons.find_log_potential(replica, shared.tempering, shared)
+    cached_lp = -Inf
+    for _ in 1:explorer.slice_sampler.n_passes
+        cached_lp = slice_sample!(explorer, replica.state, log_potential, cached_lp, replica)
+    end
+end
+
+function slice_sample!(h::MySliceSampler, state::AbstractVector, log_potential, cached_lp, replica)
+    cached_lp = Pigeons.cached_log_potential(log_potential, replica.state, cached_lp) # note: we pass `replica.state` instead of `state` in case the latter is the vector version of a non-vector state (e.g. stan and dppl models)
+
+    # iterate over coordinates
+    for c in shuffle(h.idxs)
+        pointer = Ref(state, c)
+        cached_lp = Pigeons.slice_sample_coord!(h.slice_sampler, replica, pointer, log_potential, cached_lp, typeof(pointer[])) # note: when state is mixed, pointer is RefArray{generic common type} for all coordinates, so can't use it to dispatch 
+
+        # check we still have a healthy state
+        if !isfinite(cached_lp)
+            error("""Got an invalid log density after updating state at index $c:
+            - log density = $cached_lp
+            - state[$c]   = $(pointer[])
+            Dumping full replica state:
+            $(replica.state)
+            """)
+        end
+    end
+    return cached_lp
+end
+
+function slice_sample!(h::MySliceSampler, state::Pigeons.StanState, args...)
+    slice_sample!(h, state.unconstrained_parameters, args...)
+end
+
 # Setup PT
 function get_inputs(
     explorer,
