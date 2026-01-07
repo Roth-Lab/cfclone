@@ -116,8 +116,8 @@ function Pigeons.step!(explorer::PrevalenceRWMHSampler, replica, shared)
     rng = replica.rng
     log_potential = Pigeons.find_log_potential(replica, shared.tempering, shared)
     log_p = log_potential(state)
-    sigma = build_preconditioner(zeros(explorer.num_dims), rng, explorer.std_devs)
     for i in 1:explorer.num_scans
+        sigma = build_preconditioner(zeros(explorer.num_dims), rng, explorer.std_devs)
         params_old = state.unconstrained_parameters[explorer.idxs]
         proposal = MvNormal(params_old, Diagonal(sigma))
         params_new = rand(rng, proposal)
@@ -138,9 +138,9 @@ end
 function build_preconditioner(dest::Vector{T}, rng, std_devs::Vector{T}) where {T<:Real}
     @assert length(dest) == length(std_devs)
     u = rand(rng)
-    if u ≤ 1 // 3
+    if u ≤ 1 / 3
         map!(s -> iszero(s) ? 0.1 * one(T) : s, dest, std_devs)
-    elseif u ≤ 2 // 3
+    elseif u ≤ 2 / 3
         fill!(dest, 0.1 * one(T))
     else
         mix = rand(rng, T)
