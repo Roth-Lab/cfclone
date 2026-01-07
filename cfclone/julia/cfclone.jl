@@ -21,7 +21,7 @@ function build_reference(n_clones)
     append!(result, [
         Distributions.Gamma(1, 1),      # alpha
         Distributions.Beta(1, 100),     # non_binomiality
-        Distributions.Gamma(1, 100),    # sigma
+        Distributions.Gamma(1, 100),
     ])
     return DistributionLogPotential(product_distribution(transformed.(result)))
 end
@@ -38,7 +38,7 @@ function build_outlier_reference(n_clones)
             Distributions.Beta(1, 100),     # non_binomiality
             Distributions.Gamma(1, 100),    # sigma
             Distributions.Beta(1, 100),     # outlier_rate_baf
-            Distributions.Beta(1, 100),     # outlier_rate_rdr
+            Distributions.Beta(1, 100),
         ],
     )
     return DistributionLogPotential(product_distribution(transformed.(result)))
@@ -100,6 +100,7 @@ end
     idxs::Array{Integer}
     num_dims::Integer
     num_scans = 100
+    std_devs::Array{Float64}
 end
 
 function PrevalenceRWMHSampler(lp::StanLogPotential)
@@ -107,7 +108,7 @@ function PrevalenceRWMHSampler(lp::StanLogPotential)
     names = BridgeStan.param_unc_names(model)
     idxs = findall(x -> occursin("rho", x), names)
     num_dims = length(idxs)
-    return PrevalenceRWMHSampler(idxs, num_dims, 100)
+    return PrevalenceRWMHSampler(idxs, num_dims, 100, 0.1 * ones(num_dims))
 end
 
 function Pigeons.step!(explorer::PrevalenceRWMHSampler, replica, shared)
@@ -115,14 +116,15 @@ function Pigeons.step!(explorer::PrevalenceRWMHSampler, replica, shared)
     rng = replica.rng
     log_potential = Pigeons.find_log_potential(replica, shared.tempering, shared)
     log_p = log_potential(state)
+    sigma = build_preconditioner(zeros(explorer.num_dims), rng, explorer.std_devs)
     for i in 1:explorer.num_scans
         params_old = state.unconstrained_parameters[explorer.idxs]
-        proposal = MvNormal(params_old, 0.1 * Diagonal(ones(explorer.num_dims)))
+        proposal = MvNormal(params_old, Diagonal(sigma))
         params_new = rand(rng, proposal)
         state.unconstrained_parameters[explorer.idxs] = params_new
         log_p_new = log_potential(state)
         log_q_new = logpdf(proposal, params_new)
-        proposal = MvNormal(params_new, 0.1 * Diagonal(ones(explorer.num_dims)))
+        proposal = MvNormal(params_new, Diagonal(sigma))
         log_q_old = logpdf(proposal, params_old)
         accept_ratio = exp((log_p_new - log_q_new) - (log_p - log_q_old))
         if accept_ratio < 1 && rand(rng) > accept_ratio
@@ -131,6 +133,26 @@ function Pigeons.step!(explorer::PrevalenceRWMHSampler, replica, shared)
             log_p = log_p_new
         end
     end
+end
+
+function build_preconditioner(dest::Vector{T}, rng, std_devs::Vector{T}) where {T<:Real}
+    @assert length(dest) == length(std_devs)
+    u = rand(rng)
+    if u ≤ 1 // 3
+        map!(s -> iszero(s) ? 0.1 * one(T) : s, dest, std_devs)
+    elseif u ≤ 2 // 3
+        fill!(dest, 0.1 * one(T))
+    else
+        mix = rand(rng, T)
+        rmix = one(T)-mix
+        map!(s -> iszero(s) ? 0.1 * one(T) : mix + rmix * s, dest, std_devs)
+    end
+    return dest
+end
+
+function Pigeons.adapt_explorer(explorer::PrevalenceRWMHSampler, reduced_recorders, current_pt, new_tempering)
+    std_devs = sqrt.(Pigeons.get_transformed_statistic(reduced_recorders, :singleton_variable, Pigeons.Variance))
+    return PrevalenceRWMHSampler(explorer.idxs, explorer.num_dims, explorer.num_scans, std_devs[explorer.idxs])
 end
 
 ## Slice sampler
@@ -178,7 +200,7 @@ function slice_sample!(explorer::MySliceSampler, state::AbstractVector, log_pote
 end
 
 function slice_sample!(h::MySliceSampler, state::Pigeons.StanState, args...)
-    slice_sample!(h, state.unconstrained_parameters, args...)
+    return slice_sample!(h, state.unconstrained_parameters, args...)
 end
 
 # Setup PT
