@@ -87,7 +87,7 @@ import cfclone.run
 )
 @click.option(
     "--pi-tumour",
-    default=0.1,
+    default=0.5,
     show_default=True,
     type=click.FloatRange(0),
     help="""Dirichlet prior parameter for tumour populations.""",
