@@ -18,5 +18,6 @@ cfclone = "cfclone.cli:main"
 exclude = ["sandbox"]
 
 [tool.setuptools.package-data]
+"cfclone.julia" = ["*.jl"]
 "cfclone.stan" = ["*.stan"]
 "cfclone" = ["*.json"]
