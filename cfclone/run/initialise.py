@@ -14,7 +14,6 @@ def initialise():
         data,
         0,
         num_chains=5,
-        num_chains_vi=5,
         num_rounds=2,
         use_outlier=False,
     )
@@ -24,7 +23,6 @@ def initialise():
         data,
         0,
         num_chains=5,
-        num_chains_vi=5,
         num_rounds=2,
         use_outlier=True,
     )
