@@ -23,7 +23,6 @@ def fit(
     exec_dir=None,
     num_bins=None,
     num_chains=12,
-    num_chains_vi=5,
     num_rounds=10,
     num_threads=1,
     pi_normal=10,
@@ -32,7 +31,6 @@ def fit(
     outlier=False,
     seed=None,
     sex=SexType.female,
-    slice_sampling=None,
     use_clone=(),
 ):
     priors = {
@@ -66,10 +64,8 @@ def fit(
         pt_seed,
         exec_dir=exec_dir,
         num_chains=num_chains,
-        num_chains_vi=num_chains_vi,
         num_rounds=num_rounds,
         num_threads=num_threads,
-        slice_sampling=slice_sampling,
         use_outlier=outlier,
     )
 
@@ -122,7 +118,7 @@ def fit(
 
 def build_summary_df(jl, pt):
     summary_df = jl.PythonCall.pytable(pt.shared.reports.summary)
-    summary_df = summary_df.drop("last_round_max_allocation", axis=1)
+    summary_df = summary_df.drop(["global_barrier_variational", "last_round_max_allocation"], axis=1)
     summary_df = summary_df.astype(np.float64)
     return summary_df
 

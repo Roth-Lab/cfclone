@@ -1,6 +1,3 @@
-from collections import namedtuple
-
-import enum
 import os
 import importlib.resources
 
@@ -8,32 +5,18 @@ import cfclone.julia
 import cfclone.stan
 
 
-class SliceSamplingType(enum.Enum):
-    disable = enum.auto()
-    compose = enum.auto()
-    mixture = enum.auto()
-    only = enum.auto()
-
-
-Model = namedtuple("Model", ["reference", "target"])
-
-
-def get_model(jl, data, use_outlier=True):
+def get_target(jl, data, use_outlier=True):
     stan_dir = importlib.resources.files(cfclone.stan)
 
     if use_outlier:
         stan_file = stan_dir.joinpath("cfclone_outlier.stan")
 
-        reference = jl.build_outlier_reference(data["num_clones"])
-
     else:
         stan_file = stan_dir.joinpath("cfclone.stan")
 
-        reference = jl.build_reference(data["num_clones"])
-
     target = jl.build_target(data, str(stan_file))
 
-    return Model(reference, target)
+    return target
 
 
 def run_inference(
@@ -42,44 +25,17 @@ def run_inference(
     seed,
     exec_dir=None,
     num_chains=12,
-    num_chains_vi=5,
     num_rounds=10,
     num_threads=1,
-    slice_sampling=SliceSamplingType.disable,
     use_outlier=False,
 ):
-
-    # match slice_sampling:
-    #     case SliceSamplingType.disable:
-    #         explorer = jl.seval("AutoMALA()")
-
-    #     case SliceSamplingType.compose:
-    #         explorer = jl.seval("Compose(AutoMALA(), SliceSampler())")
-
-    #     case SliceSamplingType.mixture:
-    #         explorer = jl.seval("Mix(AutoMALA(), SliceSampler())")
-
-    #     case SliceSamplingType.only:
-    #         explorer = jl.seval("SliceSampler()")
-
-    # explorer = jl.seval("SliceSampler()")
-
-    model = get_model(jl, data, use_outlier=use_outlier)
-
-    explorer = jl.seval("x -> Compose(MySliceSampler(x), Mix(ClonePairReweightSampler(x), PrevalenceRWMHSampler(x)))")(model.target)
-
-    # explorer = jl.seval("x -> MySliceSampler(x)")(model.target)
-
-    # get_explorer = jl.seval("x -> ClonePairReweightSampler()")
+    target = get_target(jl, data, use_outlier=use_outlier)
 
     inputs = jl.get_inputs(
-        explorer,
-        model.reference,
-        model.target,
+        target,
         checkpoint=(exec_dir is not None),
         multithreaded=(num_threads > 1),
         n_chains=num_chains,
-        n_chains_variational=num_chains_vi,
         n_rounds=num_rounds,
         seed=seed,
     )

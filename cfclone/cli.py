@@ -1,7 +1,5 @@
 import click
 
-from cfclone.julia import SliceSamplingType
-
 import cfclone.run
 
 
@@ -68,17 +66,10 @@ import cfclone.run
 )
 @click.option(
     "--num-chains",
-    default=12,
+    default=8,
     show_default=True,
     type=click.IntRange(1),
     help="""Number of PT chains to use for fitting.""",
-)
-@click.option(
-    "--num-chains-vi",
-    default=12,
-    show_default=True,
-    type=click.IntRange(1),
-    help="""Number of chains for the variational reference.""",
 )
 @click.option(
     "--num-rounds",
@@ -96,7 +87,7 @@ import cfclone.run
 )
 @click.option(
     "--pi-tumour",
-    default=0.5,
+    default=0.1,
     show_default=True,
     type=click.FloatRange(0),
     help="""Dirichlet prior parameter for tumour populations.""",
@@ -115,15 +106,6 @@ import cfclone.run
     default="female",
     show_default=True,
     help="""Sex of sample. Determines copy number of the normal population.""",
-)
-@click.option(
-    "--slice-sampling",
-    type=click.Choice(SliceSamplingType, case_sensitive=False),
-    default=SliceSamplingType.mixture,
-    show_default=True,
-    help="""
-    If and how to use slice sampling.
-    """,
 )
 @click.option(
     "--use-clone",
