@@ -564,7 +564,7 @@ def _build_rho_long_df(samples_df, keep_normal, renormalise):
         sep="_",
         i=["iteration", "chain"],
         j="clone_id",
-        suffix="(\\d+|normal)",
+        suffix="\\w+",
     )
 
     df.reset_index(inplace=True)
