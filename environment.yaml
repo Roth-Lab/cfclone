@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python>=3.12
-  - arviz
+  - arviz=0.23.4
   - click>=8.0
   - cxx-compiler
   - h5py
