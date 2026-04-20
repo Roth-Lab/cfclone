@@ -31,20 +31,15 @@ CfCloneDescription() = CfCloneDescription(nothing)
 function build_target(data, stan_model_file; initialize_at_map=true, laplace_max_iters=100, optimizer_options...)
     converted_data = convert_data(data)
     description = if laplace_max_iters > 0
-        try
-            CfCloneDescription(
-                laplace_approximation(
-                    converted_data,
-                    stan_model_file;
-                    initialize_at_map,
-                    max_n_iters=laplace_max_iters,
-                    optimizer_options...,
-                ),
-            )
-        catch e
-            @warn "Laplace approximation failed"
-            CfCloneDescription()
-        end
+        CfCloneDescription(
+            laplace_approximation(
+                converted_data,
+                stan_model_file;
+                initialize_at_map,
+                max_n_iters=laplace_max_iters,
+                optimizer_options...,
+            ),
+        )
     else
         CfCloneDescription()
     end
@@ -435,7 +430,16 @@ end
 function compute_inverse_metric(target, point, eigen_cutoff=1e-5, silent=true)
     _, _, hessian = logdensity_gradient_and_hessian(target, point)
     neg_hess = Hermitian(-hessian)
+    neg_hess = fix_neg_hessian(neg_hess)
     eigm = eigmin(neg_hess)
     silent || @info "Smallest eig value of negative Hessian = $eigm"
     return PDMat(eigm < eigen_cutoff ? neg_hess + (eigen_cutoff + 2.0 * abs(eigm)) * I : neg_hess)
+end
+
+function fix_neg_hessian(neg_hess::LinearAlgebra.Hermitian)
+    if any(isnan, neg_hess)
+        @warn "NaNs found in negative Hessian ... correcting"
+        replace!(parent(neg_hess), NaN => 0.0)
+    end
+    return neg_hess
 end
