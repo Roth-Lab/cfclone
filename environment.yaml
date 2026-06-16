@@ -1,4 +1,4 @@
-name: cfclone
+name: default
 channels:
   - conda-forge
 dependencies:
@@ -18,6 +18,3 @@ dependencies:
   - tbb-devel
   - scipy
   - scikit-bio
-  - pip
-  - pip:
-    - -e /home/matteo/projects/cfdna/wfs/src/tmp-cfclone/cfclone

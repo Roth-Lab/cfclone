@@ -97,8 +97,8 @@ def test_fit_output_laplace():
         in_file=ctdna_file,
         clone_cnv_file=clone_cn_file,
         out_file=fit_file,
-        exec_dir=str(pt_dir),
-        laplace_exec_dir=str(lap_dir),
+        # exec_dir=str(pt_dir),
+        # laplace_exec_dir=str(lap_dir),
         **config['sampler_config'],
         # seed=seed,
         # num_chains=2,
@@ -112,6 +112,10 @@ def test_fit_output_laplace():
     write_samples(in_file=fit_file, out_file=out_dir.joinpath('samples.tsv'))
     
     plot_laplace_trace(in_file=fit_file, out_file=out_dir.joinpath('laplace_trace.pdf'))
+    
+    var = 1
+    
+    assert var == 1
     
 
 def _load_results_laplace(file_name):

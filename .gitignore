@@ -196,4 +196,6 @@ cython_debug/
 .ruff_cache/
 
 # PyPI configuration file
-.pypirc
+.pypirc# pixi environments
+.pixi/*
+!.pixi/config.toml
