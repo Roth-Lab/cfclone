@@ -59,7 +59,7 @@ def fit(
 
     pt_seed = rng.integers(int(1e8))
 
-    pt = run_inference(
+    pt, ls = run_inference(
         jl,
         data,
         pt_seed,
@@ -72,6 +72,10 @@ def fit(
     )
 
     samples_df = build_samples_df(clones, jl, pt)
+    
+    laplace_samples_df = build_laplace_samples_df(clones, jl, ls)
+    
+    laplace_opt_trace_df = build_laplace_trace_df(clones, jl, ls)
 
     summary_df = build_summary_df(jl, pt)
 
@@ -95,6 +99,13 @@ def fit(
 
         dset = fh.create_dataset("/results/summary", data=summary_df.to_numpy(), dtype=np.float64)
         dset.attrs["columns"] = [str(x) for x in summary_df.columns]
+        
+        dset = fh.create_dataset("/results/laplace_samples", data=laplace_samples_df.to_numpy(), dtype=np.float64)
+        dset.attrs["columns"] = [str(x) for x in laplace_samples_df.columns]
+        
+        dset = fh.create_dataset("/results/laplace_opt_trace", data=laplace_opt_trace_df.to_numpy(), dtype=np.float64)
+        dset.attrs["columns"] = [str(x) for x in laplace_opt_trace_df.columns]
+
 
     if exec_dir is not None:
         build_report = jl.seval(
@@ -133,6 +144,20 @@ def build_samples_df(clones, jl, pt):
     samples_df.rename(columns=rho_map, inplace=True)
     return samples_df
 
+def build_laplace_samples_df(clones, jl, ls):
+    samples_df = jl.PythonCall.pytable(ls.chains)
+    clone_dict = {i + 1: clone for i, clone in enumerate(clones)}
+    rho_map = {col: "rho_{}".format(clone_dict[int(col[4:])]) for col in samples_df.columns if col.startswith("rho.")}
+    samples_df.rename(columns=rho_map, inplace=True)
+    return samples_df
+
+
+def build_laplace_trace_df(clones, jl, ls):
+    log_density = np.asarray(ls.approximation.optimization_trace.values)
+    step_sizes = np.asarray(ls.approximation.optimization_trace.step_sizes)
+    # points = np.array([np.asarray(p) for p in ls.approximation.optimization_trace.points]) # POINTS ARE PARAMETERS IN UNCONSTRAINED SPACE
+    out_df = pd.DataFrame({'iteration': range(1, len(log_density) + 1), 'log_density': log_density, 'step_size': step_sizes})
+    return out_df
 
 def load_data(
     clone_cnv_file,

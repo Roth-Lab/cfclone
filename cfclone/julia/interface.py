@@ -31,9 +31,10 @@ def run_inference(
     use_outlier=False,
 ):
     target = get_target(jl, data, use_outlier=use_outlier)
+        
+    ls = jl.laplace_samples(target)
     
     if laplace_exec_dir is not None:
-        ls = jl.laplace_samples(target)
         
         jl.laplace_report_with_exec(ls, exec_folder=laplace_exec_dir)
 
@@ -52,7 +53,7 @@ def run_inference(
     else:
         pt = jl.infer_with_exec(exec_dir, inputs)
 
-    return pt
+    return pt, ls
 
 
 def setup_julia_module(num_threads=1):

@@ -1,4 +1,4 @@
-name: cfclone_dev
+name: cfclone
 channels:
   - conda-forge
 dependencies:
