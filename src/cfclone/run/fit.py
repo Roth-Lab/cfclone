@@ -30,6 +30,8 @@ def fit(
     pi_tumour=0.1,
     only_normal=False,
     outlier=False,
+    rdr=True,
+    baf=True,
     seed=None,
     sex=SexType.female,
     use_clone=(),
@@ -69,6 +71,8 @@ def fit(
         num_rounds=num_rounds,
         num_threads=num_threads,
         use_outlier=outlier,
+        use_rdr=rdr,
+        use_baf=baf,
     )
 
     samples_df = build_samples_df(clones, jl, pt)

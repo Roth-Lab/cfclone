@@ -11,13 +11,8 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [tool.pixi.workspace]
-channels = ["conda-forge"]
 platforms = ["linux-64"]
-
-[tool.pixi.pypi-dependencies]
-cfclone = { path = ".", editable = true }
-
-[tool.pixi.tasks]
+channels = ["conda-forge"]
 
 [tool.pixi.dependencies]
 python = ">=3.12"
@@ -36,12 +31,21 @@ pyjuliapkg = "*"
 tbb-devel = "*"
 scipy = "*"
 scikit-bio = "*"
+pylint = ">=4.0.6,<5"
 
-[tool.pixi.feature.test.dependencies]
-pytest = "*"
+[tool.pixi.pypi-dependencies]
+cfclone = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+start = "cfclone"
+fmt = "ruff check"
+lint = "pylint"
 
 [tool.pixi.feature.test.tasks]
 test = "pytest -s"
 
 [tool.pixi.environments]
 test = ["test"]
+
+[tool.pixi.feature.test.dependencies]
+pytest = "*"

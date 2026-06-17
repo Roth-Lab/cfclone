@@ -65,6 +65,18 @@ import cfclone.run
     help="""Whether to use outlier model.""",
 )
 @click.option(
+    "--rdr/--no-rdr",
+    default=True,
+    show_default=True,
+    help="""Whether to use rdr likelihood.""",
+)
+@click.option(
+    "--baf/--no-baf",
+    default=True,
+    show_default=True,
+    help="""Whether to use baf likelihood.""",
+)
+@click.option(
     "--num-bins",
     default=None,
     show_default=True,

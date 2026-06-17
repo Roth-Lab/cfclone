@@ -5,15 +5,31 @@ import cfclone.julia
 import cfclone.stan
 
 
-def get_target(jl, data, use_outlier=True):
+def get_target(jl, data, use_outlier=True, use_rdr=True, use_baf=True):
+    
     stan_dir = importlib.resources.files(cfclone.stan)
-
-    if use_outlier:
-        stan_file = stan_dir.joinpath("cfclone_outlier.stan")
-
-    else:
-        stan_file = stan_dir.joinpath("cfclone.stan")
-
+    
+    model_map = {
+        (True, True, True): stan_dir.joinpath("cfclone_outlier.stan"),
+        (True, True, False): stan_dir.joinpath("cfclone_outlier_rdr.stan"),
+        (True, False, True): stan_dir.joinpath("cfclone_outlier_baf.stan"),
+        (False, True, True): stan_dir.joinpath("cfclone.stan"),
+        (False, True, False): stan_dir.joinpath("cfclone_rdr.stan"),
+        (False, False, True): stan_dir.joinpath("cfclone_baf.stan"),
+    }
+    
+    stan_file = model_map.get((use_outlier, use_rdr, use_baf), None)
+    
+    if stan_file is None:
+        
+        raise ValueError(
+            "Inputted model: (use_outlier, use_rdr, use_baf) = ({out}, {rdr}, {baf}) not recognized".format(
+                out=use_outlier,
+                rdr=use_rdr,
+                baf=use_baf,
+            )
+        )
+    
     target = jl.build_target(data, str(stan_file))
 
     return target
@@ -29,8 +45,16 @@ def run_inference(
     num_rounds=10,
     num_threads=1,
     use_outlier=False,
+    use_rdr=True,
+    use_baf=True,
 ):
-    target = get_target(jl, data, use_outlier=use_outlier)
+    target = get_target(
+        jl, 
+        data, 
+        use_rdr=use_rdr, 
+        use_baf=use_baf, 
+        use_outlier=use_outlier
+    )
         
     ls = jl.laplace_samples(target)
     
