@@ -1,0 +1,37 @@
+out_dir: tests/results/test_plot_clones
+
+# DATA PATHS
+
+fit_file: /home/matteo/projects/cfdna/wfs/src/tmp-cfclone/cfclone/tests/data/VOA10055P/restart_0/fit/full.h5
+
+clones:
+  - 0 
+  - 1
+
+# MODEL SETTINGS 
+
+model_config:
+  outlier: True
+  pi_normal: 10.
+  pi_tumour: 0.5
+
+# CFCLONE SAMPLER 
+
+pt_report: True
+ls_report: True
+
+sampler_config:
+  seed: 0
+  num_chains: 2
+  num_rounds: 7
+  num_threads: 2
+
+# STAN SAMPLER SETTNGS 
+
+stan_sampler_config:
+  seed: 0
+  iter_sampling: 500
+  iter_warmup: 500
+  chains: 1
+  fixed_param: False
+  adapt_engaged: False
