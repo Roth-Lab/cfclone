@@ -1,4 +1,3 @@
-import os
 import numpy as np
 
 from cfclone.julia import run_inference, setup_julia_module

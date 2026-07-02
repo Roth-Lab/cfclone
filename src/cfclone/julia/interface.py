@@ -6,9 +6,9 @@ import cfclone.stan
 
 
 def get_target(jl, data, use_outlier=True, use_rdr=True, use_baf=True):
-    
+
     stan_dir = importlib.resources.files(cfclone.stan)
-    
+
     model_map = {
         (True, True, True): stan_dir.joinpath("cfclone_outlier.stan"),
         (True, True, False): stan_dir.joinpath("cfclone_outlier_rdr.stan"),
@@ -17,11 +17,10 @@ def get_target(jl, data, use_outlier=True, use_rdr=True, use_baf=True):
         (False, True, False): stan_dir.joinpath("cfclone_rdr.stan"),
         (False, False, True): stan_dir.joinpath("cfclone_baf.stan"),
     }
-    
+
     stan_file = model_map.get((use_outlier, use_rdr, use_baf), None)
-    
+
     if stan_file is None:
-        
         raise ValueError(
             "Inputted model: (use_outlier, use_rdr, use_baf) = ({out}, {rdr}, {baf}) not recognized".format(
                 out=use_outlier,
@@ -29,7 +28,7 @@ def get_target(jl, data, use_outlier=True, use_rdr=True, use_baf=True):
                 baf=use_baf,
             )
         )
-    
+
     target = jl.build_target(data, str(stan_file))
 
     return target
@@ -49,17 +48,12 @@ def run_inference(
     use_baf=True,
 ):
     target = get_target(
-        jl, 
-        data, 
-        use_rdr=use_rdr, 
-        use_baf=use_baf, 
-        use_outlier=use_outlier
+        jl, data, use_rdr=use_rdr, use_baf=use_baf, use_outlier=use_outlier
     )
-        
+
     ls = jl.laplace_samples(target)
-    
+
     if laplace_exec_dir is not None:
-        
         jl.laplace_report_with_exec(ls, exec_folder=laplace_exec_dir)
 
     inputs = jl.get_inputs(

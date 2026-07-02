@@ -42,7 +42,6 @@ def assign_ancestral_node_names(clones, treefile):
         inner_node_idx += 1
 
     for node in tree.postorder():
-
         if node.name is None:
             node.name = template.format(ancestral_id_map[node.id])
 
@@ -82,7 +81,6 @@ def scikit_tree_to_networkx_add_prev_and_hdi(tree, df_summary):
     inner_label = "{}\nClonal Prev: {}\nHDI lower: {} | HDI upper: {}"
 
     for node in tree.traverse():
-
         node_name = node.name
         summary_row = df_summary.loc[index_template.format(node_name)]
 
@@ -95,9 +93,13 @@ def scikit_tree_to_networkx_add_prev_and_hdi(tree, df_summary):
         mean = summary_row["mean_prevalence"]
 
         if node.is_tip():
-            label = tip_label.format(node_name, round(mean, 3), round(hdi_low, 3), round(hdi_upper, 3))
+            label = tip_label.format(
+                node_name, round(mean, 3), round(hdi_low, 3), round(hdi_upper, 3)
+            )
         else:
-            label = inner_label.format(node_name, round(mean, 3), round(hdi_low, 3), round(hdi_upper, 3))
+            label = inner_label.format(
+                node_name, round(mean, 3), round(hdi_low, 3), round(hdi_upper, 3)
+            )
 
         nx_graph.add_node(node_name, label=label, prevalence_stats=summary_row)
 
@@ -108,7 +110,9 @@ def finalise_ancestral_rho_summary_df(df_summary, tree, sample_id=None):
     if sample_id is not None:
         df_summary["sample_id"] = sample_id
     df_summary = df_summary.reset_index(names=["parameters"])
-    df_summary[["parameter_name", "clone_id"]] = df_summary["parameters"].str.split("[", expand=True)
+    df_summary[["parameter_name", "clone_id"]] = df_summary["parameters"].str.split(
+        "[", expand=True
+    )
     df_summary["clone_id"] = df_summary["clone_id"].str.removesuffix("]")
     df_summary.drop(columns=["parameters"], inplace=True)
     node_order_dict = {v.name: k for k, v in enumerate(tree.postorder())}
@@ -172,9 +176,13 @@ def write_parameter_summaries(
 
     print("mu and p residuals computed\n")
 
-    baf_outlier_odds_df, baf_outlier_prob_df = _compute_baf_outlier_prob(p_df, samples_df, data)
+    baf_outlier_odds_df, baf_outlier_prob_df = _compute_baf_outlier_prob(
+        p_df, samples_df, data
+    )
 
-    rdr_outlier_odds_df, rdr_outlier_prob_df = _compute_rdr_outlier_prob(mu_df, samples_df, data)
+    rdr_outlier_odds_df, rdr_outlier_prob_df = _compute_rdr_outlier_prob(
+        mu_df, samples_df, data
+    )
 
     print("RDR and BAF outlier probs computed\n")
 
@@ -304,9 +312,13 @@ def _compute_baf_outlier_prob(p_df, samples_df, data):
 
     num_bins = p.shape[1]
 
-    odds_df = pd.DataFrame(outlier_odds, columns=["baf_outlier.{}".format(i) for i in range(num_bins)])
+    odds_df = pd.DataFrame(
+        outlier_odds, columns=["baf_outlier.{}".format(i) for i in range(num_bins)]
+    )
 
-    prob_df = pd.DataFrame(outlier_prob, columns=["baf_outlier.{}".format(i) for i in range(num_bins)])
+    prob_df = pd.DataFrame(
+        outlier_prob, columns=["baf_outlier.{}".format(i) for i in range(num_bins)]
+    )
 
     return odds_df, prob_df
 
@@ -339,9 +351,13 @@ def _compute_rdr_outlier_prob(mu_df, samples_df, data):
 
     num_bins = mu.shape[1]
 
-    odds_df = pd.DataFrame(outlier_odds, columns=["rdr_outlier.{}".format(i) for i in range(num_bins)])
+    odds_df = pd.DataFrame(
+        outlier_odds, columns=["rdr_outlier.{}".format(i) for i in range(num_bins)]
+    )
 
-    prob_df = pd.DataFrame(outlier_prob, columns=["rdr_outlier.{}".format(i) for i in range(num_bins)])
+    prob_df = pd.DataFrame(
+        outlier_prob, columns=["rdr_outlier.{}".format(i) for i in range(num_bins)]
+    )
 
     return odds_df, prob_df
 
@@ -381,7 +397,9 @@ def write_dominance_prob(in_file, out_file, normal=False):
 
     renormalise = _should_renormalise(normal)
 
-    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=normal, renormalise=renormalise)
+    rho_df, rho_cols = _build_rho_wide_df(
+        samples_df, keep_normal=normal, renormalise=renormalise
+    )
 
     rho_df["max_rho"] = rho_df[rho_cols].max(axis=1)
 
@@ -420,17 +438,23 @@ def write_pairwise_ranks(in_file, out_file, normal=False):
 def write_prevalence_samples(in_file, out_file):
     _, samples_df, _ = _load_results(in_file)
 
-    out_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=True, renormalise=False)
+    out_df, rho_cols = _build_rho_wide_df(
+        samples_df, keep_normal=True, renormalise=False
+    )
 
     out_df.columns = out_df.columns.str.replace("rho", "clone")
 
     out_df.to_csv(out_file, index=False, sep="\t")
 
 
-def write_prevalence_stats(in_file, out_file, hdi_prob=0.95, normal=False, renormalise=True):
+def write_prevalence_stats(
+    in_file, out_file, hdi_prob=0.95, normal=False, renormalise=True
+):
     data, samples_df, _ = _load_results(in_file)
 
-    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=normal, renormalise=renormalise)
+    rho_df, rho_cols = _build_rho_wide_df(
+        samples_df, keep_normal=normal, renormalise=renormalise
+    )
 
     out_df = _build_arviz_summary_df_long(rho_df, "rho", hdi_prob)
 
@@ -447,7 +471,10 @@ def write_prevalence_stats(in_file, out_file, hdi_prob=0.95, normal=False, renor
 
 def _rename_arviz_summary_mean_median_cols(df, suffix_to_add):
     suffix_to_add = "_{}".format(suffix_to_add)
-    colmap = {"mean": "mean{}".format(suffix_to_add), "median": "median{}".format(suffix_to_add)}
+    colmap = {
+        "mean": "mean{}".format(suffix_to_add),
+        "median": "median{}".format(suffix_to_add),
+    }
     df.rename(columns=colmap, inplace=True)
 
 
@@ -520,7 +547,9 @@ def _load_df(fh, key, downcast=False):
     df = pd.DataFrame(vals, columns=cols)
 
     if downcast:
-        df[["iteration", "chain"]] = df[["iteration", "chain"]].apply(pd.to_numeric, downcast="integer")
+        df[["iteration", "chain"]] = df[["iteration", "chain"]].apply(
+            pd.to_numeric, downcast="integer"
+        )
 
     return df
 
@@ -618,7 +647,9 @@ def _build_mu_and_p_dfs(data, samples_df):
 
     cn_a = data["cn_a"]
 
-    rho_df, rho_cols = _build_rho_wide_df(samples_df, keep_normal=True, renormalise=False, keep_cols="alpha")
+    rho_df, rho_cols = _build_rho_wide_df(
+        samples_df, keep_normal=True, renormalise=False, keep_cols="alpha"
+    )
 
     rho = rho_df[rho_cols].to_numpy()
 
@@ -699,12 +730,20 @@ def build_arviz_rho_summary_df(df, varname, hdi_prob, drop_sd_col=True):
 
 
 def _define_hdi_upper_and_lower_cols(df_summary, rename=True):
-    hdi_cols = {col: float(col[4:-1]) for col in df_summary.columns if col.startswith("hdi")}
+    hdi_cols = {
+        col: float(col[4:-1]) for col in df_summary.columns if col.startswith("hdi")
+    }
     hdi_col_names = list(hdi_cols.keys())
     if hdi_cols[hdi_col_names[0]] < hdi_cols[hdi_col_names[1]]:
-        hdi_col_name_map = {hdi_col_names[0]: "lower_hdi", hdi_col_names[1]: "upper_hdi"}
+        hdi_col_name_map = {
+            hdi_col_names[0]: "lower_hdi",
+            hdi_col_names[1]: "upper_hdi",
+        }
     else:
-        hdi_col_name_map = {hdi_col_names[1]: "lower_hdi", hdi_col_names[0]: "upper_hdi"}
+        hdi_col_name_map = {
+            hdi_col_names[1]: "lower_hdi",
+            hdi_col_names[0]: "upper_hdi",
+        }
     if rename:
         df_summary.rename(columns=hdi_col_name_map, inplace=True)
     else:

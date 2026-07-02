@@ -212,7 +212,9 @@ def write_pairwise_ranks(**kwargs):
     cfclone.run.write_pairwise_ranks(**kwargs)
 
 
-@click.command(context_settings={"max_content_width": 120}, name="write-prevalence-samples")
+@click.command(
+    context_settings={"max_content_width": 120}, name="write-prevalence-samples"
+)
 @click.option(
     "-i",
     "--in-file",
@@ -232,7 +234,9 @@ def write_prevalence_samples(**kwargs):
     cfclone.run.write_prevalence_samples(**kwargs)
 
 
-@click.command(context_settings={"max_content_width": 120}, name="write-prevalence-stats")
+@click.command(
+    context_settings={"max_content_width": 120}, name="write-prevalence-stats"
+)
 @click.option(
     "-i",
     "--in-file",
@@ -344,7 +348,9 @@ def write_tumour_content(**kwargs):
     cfclone.run.write_tumour_content(**kwargs)
 
 
-@click.command(context_settings={"max_content_width": 120}, name="write-parameter-summaries")
+@click.command(
+    context_settings={"max_content_width": 120}, name="write-parameter-summaries"
+)
 @click.option(
     "-i",
     "--in-file",
@@ -370,7 +376,9 @@ def write_parameter_summaries(**kwargs):
     cfclone.run.write_parameter_summaries(**kwargs)
 
 
-@click.command(context_settings={"max_content_width": 120}, name="write-ancestral-prevalences")
+@click.command(
+    context_settings={"max_content_width": 120}, name="write-ancestral-prevalences"
+)
 @click.option(
     "-i",
     "--in-file",

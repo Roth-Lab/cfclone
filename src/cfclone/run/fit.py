@@ -1,7 +1,5 @@
 import enum
-import os
 import pathlib
-import random
 
 import h5py
 import numpy as np
@@ -76,17 +74,23 @@ def fit(
     )
 
     samples_df = build_samples_df(clones, jl, pt)
-    
+
     laplace_samples_df = build_laplace_samples_df(clones, jl, ls)
-    
+
     laplace_opt_trace_df = build_laplace_trace_df(clones, jl, ls)
 
     summary_df = build_summary_df(jl, pt)
 
     with h5py.File(out_file, "w") as fh:
-        fh.create_dataset("/data/bins", data=bins, dtype=h5py.string_dtype(encoding="utf-8"))
+        fh.create_dataset(
+            "/data/bins", data=bins, dtype=h5py.string_dtype(encoding="utf-8")
+        )
 
-        fh.create_dataset("/data/clones", data=[str(x) for x in clones], dtype=h5py.string_dtype(encoding="utf-8"))
+        fh.create_dataset(
+            "/data/clones",
+            data=[str(x) for x in clones],
+            dtype=h5py.string_dtype(encoding="utf-8"),
+        )
 
         dset = fh.create_dataset("/data/cn_a", data=data["cn_a"], dtype=np.int32)
 
@@ -98,18 +102,29 @@ def fit(
 
         dset = fh.create_dataset("/data/rdr", data=data["rdr"], dtype=np.float64)
 
-        dset = fh.create_dataset("/results/samples", data=samples_df.to_numpy(), dtype=np.float64)
+        dset = fh.create_dataset(
+            "/results/samples", data=samples_df.to_numpy(), dtype=np.float64
+        )
         dset.attrs["columns"] = [str(x) for x in samples_df.columns]
 
-        dset = fh.create_dataset("/results/summary", data=summary_df.to_numpy(), dtype=np.float64)
+        dset = fh.create_dataset(
+            "/results/summary", data=summary_df.to_numpy(), dtype=np.float64
+        )
         dset.attrs["columns"] = [str(x) for x in summary_df.columns]
-        
-        dset = fh.create_dataset("/results/laplace_samples", data=laplace_samples_df.to_numpy(), dtype=np.float64)
-        dset.attrs["columns"] = [str(x) for x in laplace_samples_df.columns]
-        
-        dset = fh.create_dataset("/results/laplace_opt_trace", data=laplace_opt_trace_df.to_numpy(), dtype=np.float64)
-        dset.attrs["columns"] = [str(x) for x in laplace_opt_trace_df.columns]
 
+        dset = fh.create_dataset(
+            "/results/laplace_samples",
+            data=laplace_samples_df.to_numpy(),
+            dtype=np.float64,
+        )
+        dset.attrs["columns"] = [str(x) for x in laplace_samples_df.columns]
+
+        dset = fh.create_dataset(
+            "/results/laplace_opt_trace",
+            data=laplace_opt_trace_df.to_numpy(),
+            dtype=np.float64,
+        )
+        dset.attrs["columns"] = [str(x) for x in laplace_opt_trace_df.columns]
 
     if exec_dir is not None:
         build_report = jl.seval(
@@ -135,7 +150,9 @@ def fit(
 
 def build_summary_df(jl, pt):
     summary_df = jl.PythonCall.pytable(pt.shared.reports.summary)
-    summary_df = summary_df.drop(["global_barrier_variational", "last_round_max_allocation"], axis=1)
+    summary_df = summary_df.drop(
+        ["global_barrier_variational", "last_round_max_allocation"], axis=1
+    )
     summary_df = summary_df.astype(np.float64)
     return summary_df
 
@@ -144,14 +161,23 @@ def build_samples_df(clones, jl, pt):
     chains = jl.Chains(pt)
     samples_df = jl.PythonCall.pytable(chains)
     clone_dict = {i + 1: clone for i, clone in enumerate(clones)}
-    rho_map = {col: "rho_{}".format(clone_dict[int(col[4:])]) for col in samples_df.columns if col.startswith("rho.")}
+    rho_map = {
+        col: "rho_{}".format(clone_dict[int(col[4:])])
+        for col in samples_df.columns
+        if col.startswith("rho.")
+    }
     samples_df.rename(columns=rho_map, inplace=True)
     return samples_df
+
 
 def build_laplace_samples_df(clones, jl, ls):
     samples_df = jl.PythonCall.pytable(ls.chains)
     clone_dict = {i + 1: clone for i, clone in enumerate(clones)}
-    rho_map = {col: "rho_{}".format(clone_dict[int(col[4:])]) for col in samples_df.columns if col.startswith("rho.")}
+    rho_map = {
+        col: "rho_{}".format(clone_dict[int(col[4:])])
+        for col in samples_df.columns
+        if col.startswith("rho.")
+    }
     samples_df.rename(columns=rho_map, inplace=True)
     return samples_df
 
@@ -160,8 +186,15 @@ def build_laplace_trace_df(clones, jl, ls):
     log_density = np.asarray(ls.approximation.optimization_trace.values)
     step_sizes = np.asarray(ls.approximation.optimization_trace.step_sizes)
     # points = np.array([np.asarray(p) for p in ls.approximation.optimization_trace.points]) # POINTS ARE PARAMETERS IN UNCONSTRAINED SPACE
-    out_df = pd.DataFrame({'iteration': range(1, len(log_density) + 1), 'log_density': log_density, 'step_size': step_sizes})
+    out_df = pd.DataFrame(
+        {
+            "iteration": range(1, len(log_density) + 1),
+            "log_density": log_density,
+            "step_size": step_sizes,
+        }
+    )
     return out_df
+
 
 def load_data(
     clone_cnv_file,
@@ -184,7 +217,10 @@ def load_data(
 
     # Ensure the same set of bins is used and data is aligned
     bins = pd.merge(
-        df[["bin_name"]].drop_duplicates(), clone_df[["bin_name"]].drop_duplicates(), on="bin_name", how="inner"
+        df[["bin_name"]].drop_duplicates(),
+        clone_df[["bin_name"]].drop_duplicates(),
+        on="bin_name",
+        how="inner",
     )["bin_name"]
 
     if num_bins is not None and num_bins <= len(bins):
@@ -215,14 +251,34 @@ def load_data(
         cn_b = _add_normal_clone(cn_b)
 
     if sex == SexType.female:
-        cn_a.loc["normal", [x for x in cn_a.columns if x.split(":")[0].replace("chr", "") == "Y"]] = 0
+        cn_a.loc[
+            "normal",
+            [x for x in cn_a.columns if x.split(":")[0].replace("chr", "") == "Y"],
+        ] = 0
 
-        cn_b.loc["normal", [x for x in cn_b.columns if x.split(":")[0].replace("chr", "") == "Y"]] = 0
+        cn_b.loc[
+            "normal",
+            [x for x in cn_b.columns if x.split(":")[0].replace("chr", "") == "Y"],
+        ] = 0
 
     else:
-        cn_a.loc["normal", [x for x in cn_a.columns if x.split(":")[0].replace("chr", "") in ["X", "Y"]]] = 1
+        cn_a.loc[
+            "normal",
+            [
+                x
+                for x in cn_a.columns
+                if x.split(":")[0].replace("chr", "") in ["X", "Y"]
+            ],
+        ] = 1
 
-        cn_b.loc["normal", [x for x in cn_b.columns if x.split(":")[0].replace("chr", "") in ["X", "Y"]]] = 0
+        cn_b.loc[
+            "normal",
+            [
+                x
+                for x in cn_b.columns
+                if x.split(":")[0].replace("chr", "") in ["X", "Y"]
+            ],
+        ] = 0
 
     if only_normal:
         cn_a = cn_a.loc[["normal"]]
@@ -256,7 +312,13 @@ def load_data(
 
 
 def _add_bin_name_col(df):
-    df["bin_name"] = df["chrom"].astype(str) + ":" + df["start"].astype(str) + ":" + df["end"].astype(str)
+    df["bin_name"] = (
+        df["chrom"].astype(str)
+        + ":"
+        + df["start"].astype(str)
+        + ":"
+        + df["end"].astype(str)
+    )
 
 
 def _add_normal_clone(df):

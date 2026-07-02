@@ -3234,4 +3234,4 @@ packages:
   timestamp: 1779159948016
 - pypi: .
   name: cfclone
-  requires_python: '>=3.11'
+  requires_python: '>=3.12'
