@@ -750,3 +750,164 @@ def _define_hdi_upper_and_lower_cols(df_summary, rename=True):
         for hdi_col, new_name in hdi_col_name_map.items():
             df_summary[new_name] = df_summary[hdi_col]
     return hdi_col_name_map
+
+
+def write_posterior_predictive(
+    in_file,
+    out_file,
+    hdi_prob=0.95,
+):
+    data, samples_df, _ = _load_results(in_file)
+
+    mu_df, p_df = _build_mu_and_p_dfs(data, samples_df)
+
+    print("mu and p dataframes built\n")
+
+    baf = data["a"] / data["d"]
+
+    rdr_post_pred_df = _sample_rdr_posterior_pred(mu_df, samples_df, data)
+
+    baf_post_pred_df = _sample_baf_posterior_pred(p_df, samples_df, data)
+
+    print("RDR and BAF posterior predictice computed \n")
+
+    iter_chain_df = samples_df[["iteration", "chain"]]
+
+    mu_summary = _process_param_table(
+        mu_df,
+        iter_chain_df,
+        hdi_prob,
+        "mu",
+        "mu",
+    )
+
+    p_summary = _process_param_table(
+        p_df,
+        iter_chain_df,
+        hdi_prob,
+        "p",
+        "p",
+    )
+
+    rdr_post_pred_summary = _process_param_table(
+        rdr_post_pred_df, iter_chain_df, hdi_prob, "rdr_post_pred", "rdr_post_pred"
+    )
+
+    baf_post_pred_summary = _process_param_table(
+        baf_post_pred_df, iter_chain_df, hdi_prob, "baf_post_pred", "baf_post_pred"
+    )
+
+    result_df = mu_summary.join(
+        [
+            p_summary,
+            rdr_post_pred_summary,
+            baf_post_pred_summary,
+        ]
+    )
+    result_df["data_rdr"] = data["rdr"]
+
+    result_df["data_baf"] = baf
+
+    _add_bin_cols_to_summary_df(data["bins"], result_df)
+
+    result_df.to_csv(out_file, sep="\t")
+
+
+def _sample_rdr_posterior_pred(
+    mu_df: pd.DataFrame,
+    samples_df: pd.DataFrame,
+    data: dict,
+    seed: int = 0,
+) -> pd.DataFrame:
+    """
+    Samples the posterior predictive from MCMC samples of the mean parameter mu.
+
+    Args:
+        mu_df (pd.DataFrame): dataframe with rows as samples and columns as mu dimensions.
+        samples_df (pd.DataFrame): dataframe with rows as samples and columns as parameters.
+        data (dict): dictionary with bins and model data.
+
+    Returns:
+        rdr_post_pred_df (pd.DataFrame): dataframe with rows as samples from posterior pred columns as mu dimensions.
+    """
+
+    rng = np.random.RandomState(seed)
+
+    mu = mu_df.to_numpy()
+
+    s = samples_df["sigma"].to_numpy()
+
+    w = samples_df["outlier_rate_rdr"].to_numpy()
+
+    rdr = data["rdr"].astype(float)
+
+    rdr_post_pred = np.empty(shape=mu.shape)
+
+    for i in range(mu.shape[0]):
+        if w[i] < ss.uniform.rvs(random_state=rng):
+            rdr_pred = ss.t.rvs(df=25, loc=mu[i], scale=s[i], random_state=rng)
+
+        else:
+            rdr_pred = ss.t.rvs(df=4, loc=1, scale=1, random_state=rng)
+
+        rdr_post_pred[i] = rdr_pred
+
+    num_bins = mu.shape[1]
+
+    rdr_post_pred_df = pd.DataFrame(
+        rdr_post_pred, columns=["rdr_post_pred.{}".format(i) for i in range(num_bins)]
+    )
+
+    return rdr_post_pred_df
+
+
+def _sample_baf_posterior_pred(
+    p_df: pd.DataFrame,
+    samples_df: pd.DataFrame,
+    data: dict,
+    seed: int = 0,
+) -> pd.DataFrame:
+    """
+    Samples the posterior predictive using each MCMC samples of p.
+
+    Args:
+        p_df (pd.DataFrame): dataframe with rows as samples and columns as p dimensions.
+        samples_df (pd.DataFrame): dataframe with rows as samples and columns as parameters.
+        data (dict): dictionary with bins and model data.
+
+    Returns:
+        baf_post_pred (pd.DataFrame): dataframe with rows as samples from posterior pred columns as mu dimensions.
+    """
+
+    rng = np.random.RandomState(seed)
+
+    p = p_df.to_numpy()
+
+    p = np.clip(p, 1e-6, 1 - 1e-6)
+
+    w = samples_df["outlier_rate_baf"].to_numpy()
+
+    n = samples_df["non_binomiality"].to_numpy()
+
+    baf_post_pred = np.empty(shape=p.shape)
+
+    for i in range(p.shape[0]):
+        if w[i] < ss.uniform.rvs(random_state=rng):
+            a = p[i] / n[i]
+
+            b = (1.0 - p[i]) / n[i]
+
+            a_pred = ss.betabinom.rvs(data["d"], a, b)
+
+        else:
+            a_pred = ss.betabinom.rvs(data["d"], 1, 1)
+
+        baf_post_pred[i] = a_pred / data["d"]
+
+    num_bins = p.shape[1]
+
+    baf_post_pred_df = pd.DataFrame(
+        baf_post_pred, columns=["baf_post_pred.{}".format(i) for i in range(num_bins)]
+    )
+
+    return baf_post_pred_df

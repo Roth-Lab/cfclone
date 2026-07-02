@@ -10,5 +10,6 @@ from .postprocess import (
     write_summary,
     write_tumour_content,
     write_parameter_summaries,
+    write_posterior_predictive,
     compute_ancestral_prevalences,
 )
