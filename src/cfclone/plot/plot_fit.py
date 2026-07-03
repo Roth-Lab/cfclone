@@ -8,104 +8,158 @@ import seaborn as sb
 
 from matplotlib.lines import Line2D
 
-from collections import namedtuple
-
 from pathlib import Path
 
 import yaml
 
 from cfclone.plot.colours import colours
 
-
-def plot_fit(fit_file: str, out_file: str | None = None):
-    pass
+from dataclasses import dataclass
 
 
-AxisSettings = namedtuple(
-    "AxisSettings", ["df", "ydata", "ylabel", "ycolour", "title", "legend"]
-)
-
-chrom_dtype = pd.CategoricalDtype(
-    categories=["chr{}".format(i) for i in list(range(1, 23))] + ["chrX"] + ["chrY"],
-    ordered=True,
-)
-
-plot_settings = {
-    # "figure.labelsize": 16,
-    "axes.facecolor": "white",
-    # "axes.titlesize": 14,
-    # "axes.labelsize": 16,
-    # "xtick.labelsize": 9,
-    # "ytick.labelsize": 9,
-    "text.usetex": True,
-    "grid.color": "darkgrey",
-    "font.family": "sans-serif",
-    "font.sans-serif": [
-        "Helvetica",
-        "Nimbus Sans",
-        "Liberation Sans",
-        "DejaVu Sans",
-        "Arial",
-    ],
-    # "legend.title_fontsize": 12,
-    # "legend.fontsize": 10,
-    # "figure.dpi": 150,
-    # "savefig.dpi": 150,
-}
+@dataclass
+class AxisSettings:
+    df: pd.DataFrame
+    yvar: str
+    ydata: str | None = None
+    ylabel: str | None = None
+    title: str | None = None
+    legend: bool = False
 
 
-# sort_chroms adapted from: https://github.com/Roth-Lab/hapclone-smk/blob/main/scripts/plot_clone_pseudobulk.py
-def sort_chroms(chroms):
-    numeric = []
-    string = []
+def plot_fit(
+    in_file: str,
+    data_to_plot: list[str] = ["rdr", "baf"],
+    title: str | None = None,
+    out_file: str | None = None,
+) -> None:
 
-    if chroms[0].startswith("chr"):
-        chr_prefix = True
-    else:
-        chr_prefix = False
+    df = pd.read_csv(in_file, sep="\t")
 
-    for c in chroms:
-        if chr_prefix:
-            c = c.replace("chr", "")
-        try:
-            numeric.append(int(c))
-        except ValueError:
-            string.append(c)
+    plot_rows = get_plot_rows(df, data_to_plot)
 
-    chroms = [str(x) for x in sorted(numeric)] + list(sorted(string))
+    fig = plt.figure(figsize=(16, 2 * len(plot_rows)))
 
-    if chr_prefix:
-        chroms = ["chr{}".format(x) for x in chroms]
+    grid = fig.add_gridspec(nrows=len(plot_rows), ncols=1)
 
-    return chroms
+    chroms = sort_chroms(df["chrom"].unique())
+
+    chroms_size = df["chrom"].value_counts()
+
+    width_ratios = [chroms_size[x] for x in chroms]
+
+    for row_idx, v in enumerate(plot_rows):
+        sub_grid = grid[row_idx].subgridspec(
+            nrows=1,
+            ncols=len(chroms),
+            width_ratios=width_ratios,
+        )
+
+        plot_data(
+            df=v.df,
+            chroms=chroms,
+            fig=fig,
+            grid=sub_grid,
+            title=v.title,
+            yvar=v.yvar,
+            ydata=v.ydata,
+            ylabel=v.ylabel,
+            plot_legend=v.legend,
+        )
+
+    fig.align_labels()
+
+    grid.tight_layout(fig)
+
+    fig.savefig(out_file)
+
+
+def get_plot_rows(df: pd.DataFrame, data_to_plot: list[str]) -> list[AxisSettings]:
+    plot_rows = []
+
+    if "rdr" in data_to_plot:
+        rdr_fit = AxisSettings(
+            df=df,
+            yvar="mu",
+            ydata="rdr",
+            ylabel="RDR",
+            legend=True,
+        )
+
+        plot_rows.append(rdr_fit)
+
+        rdr_res = AxisSettings(
+            df=df,
+            yvar="mu_residual",
+            ylabel="RDR Residual",
+        )
+
+        plot_rows.append(rdr_res)
+
+        rdr_out_bin = AxisSettings(
+            df=df,
+            yvar="rdr_outlier_prob",
+            ylabel="RDR outlier probs",
+        )
+
+        plot_rows.append(rdr_out_bin)
+
+    if "baf" in data_to_plot:
+        baf_fit = AxisSettings(
+            df=df,
+            yvar="p",
+            ydata="baf",
+            ylabel="BAF",
+        )
+
+        plot_rows.append(baf_fit)
+
+        baf_res = AxisSettings(
+            df=df,
+            yvar="p_residual",
+            ylabel="BAF",
+        )
+
+        plot_rows.append(baf_res)
+
+        baf_out_bin = AxisSettings(
+            df=df,
+            yvar="baf_outlier_prob",
+            ylabel="BAF outlier probs",
+        )
+
+        plot_rows.append(baf_out_bin)
+
+    return plot_rows
 
 
 def plot_data(
-    df,
-    chroms,
-    fig,
-    grid,
-    y_data,
-    y_label=None,
-    title=None,
-    plot_legend=False,
-    colour=None,
+    df: pd.DataFrame,
+    chroms: list[str],
+    fig: plt.Figure,
+    grid: plt.GridSpec,
+    yvar: str,
+    ydata: str | None = None,
+    ylabel: str | None = None,
+    title: str | None = None,
+    plot_legend: bool = False,
 ):
-    mean_col = y_data + "_mean"
+    mean_col = yvar + "_mean"
 
-    lower_col = y_data + "_lb"
+    lower_col = yvar + "_lower_hdi"
 
-    upper_col = y_data + "_ub"
-
-    real_col = y_data + "_real"
+    upper_col = yvar + "_upper_hdi"
 
     y_max = df[upper_col].max()
 
     y_min = df[lower_col].min()
 
-    y_max = max(df[real_col].max(), y_max)
+    if ydata is not None:
+        data_col = "data_" + ydata
 
-    y_min = min(df[real_col].min(), y_min)
+        y_max = max(df[data_col].max(), y_max)
+
+        y_min = min(df[data_col].min(), y_min)
 
     grouped = df.groupby("chrom")
 
@@ -122,28 +176,27 @@ def plot_data(
 
         ax = fig.add_subplot(grid[0, i])
 
-        # if y_col is not None:
+        if ydata is not None:
+            ax.scatter(
+                chrom_df["idx"],
+                chrom_df[data_col],
+                c=colours["orange"],
+                s=1,
+            )
+
         ax.scatter(
             chrom_df["idx"],
-            chrom_df[real_col],
-            c=colours["orange"],
+            chrom_df[mean_col],
+            c=colours["blue"],
             s=1,
-            # alpha=0.5,
+            alpha=0.2,
         )
-
-        # ax.scatter(
-        #     chrom_df["idx"],
-        #     chrom_df[mean_col],
-        #     c=colour,
-        #     s=1,
-        #     alpha=0.2,
-        # )
 
         ax.fill_between(
             chrom_df["idx"],
             y1=chrom_df[lower_col],
             y2=chrom_df[upper_col],
-            color=colours["grey"],
+            color=colours["blue"],
             alpha=0.2,
         )
 
@@ -185,7 +238,7 @@ def plot_data(
         else:
             ax.tick_params(axis="x", which="major", labelsize=12)
 
-            ax.set_ylabel(y_label)
+            ax.set_ylabel(ylabel)
 
         ax.set_xticks([num_bins / 2])
 
@@ -206,8 +259,8 @@ def plot_data(
             sim = Line2D(
                 [],
                 [],
-                label="Simulated data (95\% quantile)",
-                color="grey",
+                label="Fit",
+                color=colours["blue"],
                 marker="",
                 linestyle="-",
             )
@@ -227,150 +280,27 @@ def plot_data(
         ax.set_title(title)
 
 
-def tumour_content_title(tc: dict[str, float]) -> str:
-    return "Tumour content estimate\n mean: {m} HDI 95\% : [{lb}, {ub}]".format(
-        m=round(tc["mean"], 3),
-        lb=round(tc["lower_hdi"], 3),
-        ub=round(tc["upper_hdi"], 3),
-    )
+def sort_chroms(chroms: list[str]) -> list[str]:
+    """sort_chroms adapted from: https://github.com/Roth-Lab/hapclone-smk/blob/main/scripts/plot_clone_pseudobulk.py"""
+    numeric = []
+    string = []
 
+    if chroms[0].startswith("chr"):
+        chr_prefix = True
+    else:
+        chr_prefix = False
 
-def plot_meta(
-    df: pd.DataFrame,
-    data_to_plot: list[str] = ["rdr", "baf"],
-    out_file: str | None = None,
-) -> None:
+    for c in chroms:
+        if chr_prefix:
+            c = c.replace("chr", "")
+        try:
+            numeric.append(int(c))
+        except ValueError:
+            string.append(c)
 
-    plt.rcParams.update(plot_settings)
+    chroms = [str(x) for x in sorted(numeric)] + list(sorted(string))
 
-    plot_rows = []
+    if chr_prefix:
+        chroms = ["chr{}".format(x) for x in chroms]
 
-    for patient_idx, patient_id in enumerate(df["patient_id"].unique()):
-        df_p = df.loc[df["patient_id"] == patient_id]
-
-        for sample_idx, sample_id in enumerate(df_p["sample_id"].unique()):
-            df_s = df_p.loc[(df_p["sample_id"] == sample_id)]
-
-            if "rdr" in data_to_plot:
-                tc = tumour_content_estimate(
-                    patient_id=patient_id, sample_id=sample_id, restart=0
-                )
-
-                title = tumour_content_title(tc)
-
-                rdr = AxisSettings(
-                    df=df_s,
-                    ydata="rdr",
-                    # ylabel='RDR',
-                    ylabel=r"$RDR_{i}$",
-                    ycolour="grey",
-                    # title="Patient {p} Sample: {s}".format(p=patient_id, s=sample_id),
-                    title=title,
-                    legend=True if sample_idx == 0 else False,
-                )
-
-                plot_rows.append(rdr)
-
-            if "baf" in data_to_plot:
-                baf = AxisSettings(
-                    df=df_s,
-                    ydata="baf",
-                    # ylabel='BAF',
-                    ylabel=r"$BAF_{i}$",
-                    ycolour="grey",
-                    # title="Patient {p} Sample: {s}".format(p=patient_id, s=sample_id),
-                    title=None,
-                    legend=True
-                    if (sample_idx == 0) and (not "rdr" in data_to_plot)
-                    else False,
-                )
-
-                plot_rows.append(baf)
-
-    num_plot_values = len(plot_rows)
-
-    fig = plt.figure(figsize=(16, 2 * num_plot_values))
-
-    grid = fig.add_gridspec(num_plot_values, 1, hspace=0.1)
-
-    chroms = sort_chroms(df["chrom"].unique())
-
-    chroms_size = df["chrom"].value_counts()
-
-    width_ratios = [chroms_size[x] for x in chroms]
-
-    for i, v in enumerate(plot_rows):
-        sub_grid = grid[i].subgridspec(
-            nrows=1, ncols=len(chroms), width_ratios=width_ratios, wspace=0.05
-        )
-
-        plot_data(
-            df=v.df,
-            chroms=chroms,
-            fig=fig,
-            grid=sub_grid,
-            title=v.title,
-            y_data=v.ydata,
-            y_label=v.ylabel,
-            plot_legend=v.legend,
-            colour=v.ycolour,
-        )
-
-    fig.align_labels()
-
-    fig.supxlabel("Chromosome", x=0.525)
-
-    grid.tight_layout(fig)
-
-    fig.savefig(out_file, dpi=150, bbox_inches="tight")
-
-
-def plot_wgs_sim_quantiles(config_file):
-
-    config = yaml.safe_load(open(config_file, "r"))
-
-    out_dir = Path(config["out_dir"])
-
-    samples = config["patients"]
-
-    patients = list(samples.keys())
-
-    samples = [s for p in patients for s in samples[p]]
-
-    df = pd.read_csv(out_dir.joinpath("data.tsv"), sep="\t").loc[
-        lambda df: (df["patient_id"].isin(patients)) & (df["sample_id"].isin(samples))
-    ]
-
-    df.to_csv(out_dir.joinpath("wgs_data.tsv"))
-
-    # plot_meta(
-    #     df=df,
-    #     data_to_plot=['rdr'],
-    #     out_file=out_dir.joinpath('wgs_rdr.svg')
-    # )
-
-    # plot_meta(
-    #     df=df,
-    #     data_to_plot=['baf'],
-    #     out_file=out_dir.joinpath('wgs_baf.svg'),
-    # )
-
-    # plot_meta(
-    #     df=df,
-    #     data_to_plot=['rdr'],
-    #     out_file=out_dir.joinpath('wgs_rdr.png')
-    # )
-
-    # plot_meta(
-    #     df=df,
-    #     data_to_plot=['baf'],
-    #     out_file=out_dir.joinpath('wgs_baf.png'),
-    # )
-
-    plot_meta(
-        df=df, data_to_plot=["rdr", "baf"], out_file=out_dir.joinpath("wgs_rdr_baf.svg")
-    )
-
-    plot_meta(
-        df=df, data_to_plot=["rdr", "baf"], out_file=out_dir.joinpath("wgs_rdr_baf.png")
-    )
+    return chroms
