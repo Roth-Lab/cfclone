@@ -30,7 +30,6 @@ class AxisSettings:
 def plot_fit(
     in_file: str,
     data_to_plot: list[str] = ["rdr", "baf"],
-    title: str | None = None,
     out_file: str | None = None,
 ) -> None:
 
