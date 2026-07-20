@@ -47,6 +47,13 @@ import cfclone.run
     """,
 )
 @click.option(
+    "--laplace-exec-dir",
+    type=click.Path(resolve_path=True),
+    help="""
+    Path to directory where laplace approx info info will be saved.
+    """,
+)
+@click.option(
     "--only-normal",
     is_flag=True,
     help="""Whether to fit a model with just a normal cell population.""",

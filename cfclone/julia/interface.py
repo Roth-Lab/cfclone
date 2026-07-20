@@ -24,12 +24,18 @@ def run_inference(
     data,
     seed,
     exec_dir=None,
+    laplace_exec_dir=None,
     num_chains=12,
     num_rounds=10,
     num_threads=1,
     use_outlier=False,
 ):
     target = get_target(jl, data, use_outlier=use_outlier)
+    
+    if laplace_exec_dir is not None:
+        ls = jl.laplace_samples(target)
+        
+        jl.laplace_report_with_exec(ls, exec_folder=laplace_exec_dir)
 
     inputs = jl.get_inputs(
         target,

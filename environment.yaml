@@ -1,9 +1,9 @@
-name: cfclone
+name: cfclone_dev
 channels:
   - conda-forge
 dependencies:
   - python>=3.12
-  - arviz
+  - arviz=0.23.4
   - click>=8.0
   - cxx-compiler
   - h5py
@@ -12,8 +12,12 @@ dependencies:
   - networkx
   - numpy
   - pandas
+  - pyyaml
   - pyjuliacall>=0.9.22
   - pyjuliapkg
   - tbb-devel
   - scipy
   - scikit-bio
+  - pip
+  - pip:
+    - -e /home/matteo/projects/cfdna/wfs/src/tmp-cfclone/cfclone
