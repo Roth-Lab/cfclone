@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
-from cfclone.run.postprocess import _load_results, _add_bin_cols_to_summary_df
 from cfclone.plot.colours import colours
 from cfclone.plot.chrom_utils import sort_chroms
+
 
 @dataclass
 class RowPlot:
@@ -13,44 +13,20 @@ class RowPlot:
     yvar: str
 
 
-def _load_clone_data(in_file: str) -> pd.DataFrame:
-    data, _, _ = _load_results(in_file)
-
-    cn_t = pd.DataFrame(data["cn_t"].T, columns=data["clones"])
-
-    _add_bin_cols_to_summary_df(data["bins"], cn_t)
-
-    cn_t = cn_t.melt(
-        id_vars=["chrom", "start", "end"], var_name="clone", value_name="total"
-    )
-
-    cn_a = pd.DataFrame(data["cn_a"].T, columns=data["clones"])
-
-    _add_bin_cols_to_summary_df(data["bins"], cn_a)
-
-    cn_a = cn_a.melt(
-        id_vars=["chrom", "start", "end"], var_name="clone", value_name="a"
-    )
-
-    clones_df = cn_t.merge(cn_a)
-
-    return clones_df
-
-
-def plot_clones(in_file: str, out_file: str, yvar: str = "total"):
-
-    clones_df = _load_clone_data(in_file)
+def plot_clones_from_tsv(clone_cn_file: str, plot_file: str, yvar: str = "total"):
+    clones_df = pd.read_csv(clone_cn_file, sep='\t')
 
     if yvar == "total":
-        ylims = clones_df["total"].min(), clones_df["total"].max()
-
+        clones_df['total'] = clones_df['cn_a'] + clones_df['cn_b']
+        ylims = (clones_df['total'].min(), clones_df['total'].max())
     else:
         ylims = (0, 1)
 
-    clones = clones_df["clone"].unique()[:4]
+    clones = list(clones_df["clone"].unique())
+    if len(clones) > 4:
+        clones = clones_df["clone"].unique()[:6]
 
     rows = []
-
     for c_idx, c in enumerate(clones):
         rows.append(
             RowPlot(
@@ -60,10 +36,9 @@ def plot_clones(in_file: str, out_file: str, yvar: str = "total"):
             )
         )
 
-    fig = plt.figure(figsize=(6.5, 9))
-
+    fig = plt.figure(figsize=(16, 2 * len(rows)))
     gs = fig.add_gridspec(nrows=len(rows))
-
+    
     for r_idx, r in enumerate(rows):
         plot_data(
             df=r.df,
@@ -78,7 +53,7 @@ def plot_clones(in_file: str, out_file: str, yvar: str = "total"):
 
     plt.tight_layout()
 
-    plt.savefig(out_file)
+    plt.savefig(plot_file)
 
     plt.close()
 
@@ -91,35 +66,24 @@ def plot_data(
     yvar: str,
     title: str,
 ):
-
     chroms = sort_chroms(df["chrom"].unique())
-
     chroms_size = df["chrom"].value_counts()
-
     width_ratios = [chroms_size[x] for x in chroms]
-
     sub_grid = grid.subgridspec(
         nrows=1, ncols=len(chroms), width_ratios=width_ratios, wspace=0.05
     )
-
     grouped = df.groupby("chrom")
-
-    last_chrom = chroms[-1]
 
     for i, chrom in enumerate(chroms):
         chrom_df = grouped.get_group(chrom)
-
         chrom_df = chrom_df.sort_values(by=["start"])
-
         num_bins = chrom_df.shape[0]
-
         chrom_df["idx"] = np.arange(num_bins)
 
         ax = fig.add_subplot(sub_grid[0, i])
 
         if yvar == "total":
             y = chrom_df["total"]
-
         else:
             y = chrom_df["a"] / chrom_df["total"]
 
@@ -131,23 +95,17 @@ def plot_data(
         )
 
         ax.set_ylim(ylims[0], ylims[1])
-
         ax.spines["top"].set_visible(False)
-
         ax.spines["right"].set_visible(False)
 
         if i != 0:
             ax.spines["left"].set_visible(False)
-
             ax.tick_params(axis="y", labelleft=False, left=False)
-
         else:
             ax.tick_params(axis="x", which="major")
 
         ax.set_xticks([num_bins / 2])
-
         ax.set_xticklabels([chrom.replace("chr", "")])
-
         ax.set_yticks(
             ticks=[int(x) for x in range(ylims[0], ylims[1] + 1)],
             labels=[str(int(x)) for x in range(ylims[0], ylims[1] + 1)],
@@ -155,5 +113,3 @@ def plot_data(
 
         if i == 7:
             ax.set_title(title)
-
-

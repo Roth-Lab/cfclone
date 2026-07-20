@@ -72,6 +72,8 @@ def plot_fit(
 
     fig.savefig(out_file)
 
+    fig.close()
+
 
 def get_plot_rows(df: pd.DataFrame, data_to_plot: list[str]) -> list[AxisSettings]:
     plot_rows = []
@@ -116,7 +118,7 @@ def get_plot_rows(df: pd.DataFrame, data_to_plot: list[str]) -> list[AxisSetting
         baf_res = AxisSettings(
             df=df,
             yvar="p_residual",
-            ylabel="BAF",
+            ylabel="BAF Residuals",
         )
 
         plot_rows.append(baf_res)
