@@ -39,6 +39,9 @@ scipy = "*"
 scikit-bio = "*"
 pylint = ">=4.0.6,<5"
 seaborn = ">=0.13.2,<0.14"
+jupyterlab = ">=4.6.1,<5"
+ipykernel = ">=7.3.0,<8"
+pip = ">=26.1.2,<27"
 
 [tool.pixi.pypi-dependencies]
 cfclone = { path = ".", editable = true }
