@@ -1,6 +1,7 @@
 *__pycache__*
 *sandbox*
 *results*
+!example/results
 *data*
 *egg-info*
 build*

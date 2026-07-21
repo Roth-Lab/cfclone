@@ -34,4 +34,4 @@ Commands:
 ```
 
 ## Example
-See [example](example/example.ipynb) for a toy example taking in ctdna and clone copy numbers.
+See [example](example/example.ipynb) for a toy example modelling ctdna with a single clone for a subset of bins.

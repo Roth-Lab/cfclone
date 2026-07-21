@@ -72,7 +72,7 @@ def plot_fit(
 
     fig.savefig(out_file)
 
-    fig.close()
+    plt.close()
 
 
 def get_plot_rows(df: pd.DataFrame, data_to_plot: list[str]) -> list[AxisSettings]:
