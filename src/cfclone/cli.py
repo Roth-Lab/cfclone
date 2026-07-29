@@ -47,6 +47,13 @@ import cfclone.run
     """,
 )
 @click.option(
+    "--laplace-exec-dir",
+    type=click.Path(resolve_path=True),
+    help="""
+    Path to directory where laplace approx info info will be saved.
+    """,
+)
+@click.option(
     "--only-normal",
     is_flag=True,
     help="""Whether to fit a model with just a normal cell population.""",
@@ -56,6 +63,18 @@ import cfclone.run
     default=True,
     show_default=True,
     help="""Whether to use outlier model.""",
+)
+@click.option(
+    "--rdr/--no-rdr",
+    default=True,
+    show_default=True,
+    help="""Whether to use rdr likelihood.""",
+)
+@click.option(
+    "--baf/--no-baf",
+    default=True,
+    show_default=True,
+    help="""Whether to use baf likelihood.""",
 )
 @click.option(
     "--num-bins",
@@ -193,7 +212,9 @@ def write_pairwise_ranks(**kwargs):
     cfclone.run.write_pairwise_ranks(**kwargs)
 
 
-@click.command(context_settings={"max_content_width": 120}, name="write-prevalence-samples")
+@click.command(
+    context_settings={"max_content_width": 120}, name="write-prevalence-samples"
+)
 @click.option(
     "-i",
     "--in-file",
@@ -213,7 +234,9 @@ def write_prevalence_samples(**kwargs):
     cfclone.run.write_prevalence_samples(**kwargs)
 
 
-@click.command(context_settings={"max_content_width": 120}, name="write-prevalence-stats")
+@click.command(
+    context_settings={"max_content_width": 120}, name="write-prevalence-stats"
+)
 @click.option(
     "-i",
     "--in-file",
@@ -325,7 +348,9 @@ def write_tumour_content(**kwargs):
     cfclone.run.write_tumour_content(**kwargs)
 
 
-@click.command(context_settings={"max_content_width": 120}, name="write-parameter-summaries")
+@click.command(
+    context_settings={"max_content_width": 120}, name="write-parameter-summaries"
+)
 @click.option(
     "-i",
     "--in-file",
@@ -351,7 +376,37 @@ def write_parameter_summaries(**kwargs):
     cfclone.run.write_parameter_summaries(**kwargs)
 
 
-@click.command(context_settings={"max_content_width": 120}, name="write-ancestral-prevalences")
+@click.command(
+    context_settings={"max_content_width": 120}, name="write-posterior-predictive"
+)
+@click.option(
+    "-i",
+    "--in-file",
+    required=True,
+    type=click.Path(exists=True, resolve_path=True),
+    help="""Path to results from the `fit` command.""",
+)
+@click.option(
+    "-o",
+    "--out-file",
+    required=True,
+    type=click.Path(resolve_path=True, writable=True),
+    help="""Path where results will be written in TSV format.""",
+)
+@click.option(
+    "--hdi-prob",
+    default=0.95,
+    type=click.FloatRange(0, 1),
+    help="""Width of HDI interval.""",
+)
+def write_posterior_predictive(**kwargs):
+    """Write the posterior summary tables for mu and p model parameters."""
+    cfclone.run.write_posterior_predictive(**kwargs)
+
+
+@click.command(
+    context_settings={"max_content_width": 120}, name="write-ancestral-prevalences"
+)
 @click.option(
     "-i",
     "--in-file",
@@ -429,3 +484,4 @@ main.add_command(write_summary)
 main.add_command(write_tumour_content)
 main.add_command(write_parameter_summaries)
 main.add_command(compute_ancestral_prevalences)
+main.add_command(write_posterior_predictive)

@@ -1,23 +1,59 @@
-[build-system]
-requires = ["setuptools >= 77.0.3"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "cfClone"
-version = "0.3"
-requires-python = ">=3.12"
-classifiers = ["Private :: Do Not Upload", "Development Status :: 4 - Beta", "Programming Language :: Python :: 3.12"]
+name = "cfclone"
+requires-python = ">= 3.12"
+version = "0.1.0"
+scripts = { cfclone = "cfclone.cli:main" }
 
-[tool.black]
-line-length = 120
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
 
-[project.scripts]
-cfclone = "cfclone.cli:main"
+[tool.uv]
+package = true
 
-[tool.setuptools.packages.find]
-exclude = ["sandbox"]
+[tool.pixi.tasks]
+start = "cfclone"
+lint = "ruff check --fix"
+format = "ruff format"
 
-[tool.setuptools.package-data]
-"cfclone.julia" = ["*.jl"]
-"cfclone.stan" = ["*.stan"]
-"cfclone" = ["*.json"]
+[tool.pixi.workspace]
+platforms = ["linux-64"]
+channels = ["conda-forge"]
+
+[tool.pixi.dependencies]
+python = ">=3.12"
+arviz = "0.23.4.*"
+click = ">=8.0"
+cxx-compiler = "*"
+h5py = "*"
+juliaup = "*"
+make = "*"
+networkx = "*"
+numpy = "*"
+pandas = "*"
+pyyaml = "*"
+pyjuliacall = ">=0.9.22"
+pyjuliapkg = "*"
+tbb-devel = "*"
+scipy = "*"
+scikit-bio = "*"
+pylint = ">=4.0.6,<5"
+seaborn = ">=0.13.2,<0.14"
+jupyterlab = ">=4.6.1,<5"
+ipykernel = ">=7.3.0,<8"
+pip = ">=26.1.2,<27"
+
+[tool.pixi.pypi-dependencies]
+cfclone = { path = ".", editable = true }
+
+[tool.pixi.feature.test.tasks]
+test = "pytest -s"
+
+[tool.pixi.environments]
+test = ["test"]
+
+[tool.pixi.feature.test.dependencies]
+pytest = "*"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]

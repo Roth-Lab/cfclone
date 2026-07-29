@@ -1,0 +1,2 @@
+in-file: /home/matteo/projects/cfdna/wfs/src/tmp-cfclone/cfclone/tests/data/VOA10055P/restart_0/fit/full.h5
+out-file: /home/matteo/projects/cfdna/wfs/src/tmp-cfclone/cfclone/tests/test_postprocess/results/test_write_parameter_summaries/parameter_summaries.tsv

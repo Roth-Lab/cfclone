@@ -1,0 +1,3 @@
+in_file: /home/matteo/projects/cfdna/wfs/src/tmp-cfclone/cfclone/tests/test_plot/data/parameter_summaries.tsv
+
+out_file: /home/matteo/projects/cfdna/wfs/src/tmp-cfclone/cfclone/tests/test_plot/results/plot_fit/fit.png 

@@ -1,7 +1,12 @@
 *__pycache__*
 *sandbox*
+*results*
+!example/results
+*data*
 *egg-info*
 build*
+
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -192,4 +197,6 @@ cython_debug/
 .ruff_cache/
 
 # PyPI configuration file
-.pypirc
+.pypirc# pixi environments
+.pixi/*
+!.pixi/config.toml
