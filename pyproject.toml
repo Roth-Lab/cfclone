@@ -12,12 +12,12 @@ build-backend = "uv_build"
 package = true
 
 [tool.pixi.tasks]
-start = "cfclone"
+init = "cfclone init"
 lint = "ruff check --fix"
 format = "ruff format"
 
 [tool.pixi.workspace]
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-arm64"]
 channels = ["conda-forge"]
 
 [tool.pixi.dependencies]
