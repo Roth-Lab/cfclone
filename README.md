@@ -1,16 +1,16 @@
 # cfClone - an scWGS and cfDNA integrated analysis 
 A Bayesian model to perform clonal deconvolution of cfDNA given scWGS.
 
-# Getting started 
-1. Clone and `cd` into this repository 
+## Getting started
+
+First clone and `cd` into this repository 
 ```
-> git clone -depth 1 https://github.com/RothLab/cfcfclone.git
-> cd cfclone
+git clone --depth 1 https://github.com/RothLab/cfclone.git
+cd cfclone
 ```
-2. Download [pixi](https://pixi.prefix.dev/latest/) and run 
+to install and run cfClone download [pixi](https://pixi.prefix.dev/latest/) and run the following command
 ```
-> pixi run start
-✨ Pixi task (start in default): cfclone
+pixi run cfclone
 Usage: cfclone [OPTIONS] COMMAND [ARGS]...
 
 Options:
@@ -33,8 +33,59 @@ Commands:
   write-tumour-content         Write the posterior summary for overall tumour content.
 ```
 
-## Example
-See [example](example/example.ipynb) for a toy example modelling ctdna with a single clone for a subset of bins.
+The main function to perform inference is `cfclone fit` at minimum it expects
+
+1. a tsv file that contains the bin wise read depth ratio and haplotype type counts ([see](example/data/cfdna.tsv.gz) for example)
+
+2. a tsv file that contains the bin wise total and haplotype specific copy number matrix ([see](example/data/clone_cn.tsv.gz) for example)
+
+3. and a path to output inference to an h5 file.
+
+once the data files are obtained and an output path selected, inference can be performed with default values as follows:
+
+```bash
+pixi run cfclone fit --clone-cnv-file example/data/clone_cn.tsv.gz --in-file example/data/cfdna.tsv.gz --out-file example/results/fit.h5
+```
+
+The posterior mean and $95\%$ HDI of the tumour fraction and clone prevalences can be computed with
+
+```bash
+pixi run cfclone write-tumour-content --in-file example/results/fit.h5 --out-file example/results/tumour_content.tsv
+pixi run cfclone write-prevalence-stats --in-file example/results/fit.h5 --out-file example/results/prevs.tsv
+```
+
+where the posterior summary statistics are stored at [tumour content](example/results/tumour_content.tsv) and [clone prevalence](example/results/prevs.tsv).
+
+Additionally see [example](example/example.ipynb) for a toy example modelling ctdna with a single clone for a subset of bins.
+
+### Optional values for `cfclone fit`
+___
+
+**Data Parameters**
+
+* `--sex [female|male]`: Sets sample sex to define normal cell copy number profiles (default: `female`).
+* `--use-clone TEXT`: Selects specific clone profiles to include from the input file (defaults to all).
+* `--num-bins INTEGER`: Number of bins to subsample from input data for model fitting (`x >= 1`).
+
+**Model Parameters**
+
+* `--add-normal / --no-add-normal`: Toggles inclusion of a cell population (default: `--add-normal`).
+* `--only-normal`: Restricts model to only a normal cell population.
+* `--outlier / --no-outlier`: Enables or disables the outlier model component (default: `--outlier`).
+* `--rdr / --no-rdr`: Enables or disables the RDR likelihood (default: `--rdr`).
+* `--baf / --no-baf`: Enables or disables the BAF likelihood term (default: `--baf`).
+* `--pi-normal FLOAT`: Dirichlet prior hyperparameter for the normal population fraction (default: `10`, `x >= 0`).
+* `--pi-tumour FLOAT`: Dirichlet prior hyperparameter for tumour population fractions (default: `0.5`, `x >= 0`).
+
+**Inference Parameters**
+
+* `-t, --num-threads INTEGER`: Number of CPU threads to allocate for processing (default: `1`, `x >= 1`).
+* `--num-chains INTEGER`: Number of Parallel Tempering (PT) MCMC chains (default: `8`, `x >= 1`).
+* `--num-rounds INTEGER`: Number of PT sampling rounds (default: `10`, `x >= 1`).
+* `--seed INTEGER`: Random seed for reproducibility (`x >= 0`).
+* `--exec-dir PATH`: Directory path to write additional sampler outputs.
+* `--laplace-exec-dir PATH`: Directory path to write Laplace approximation outputs.
+
 
 # License
 cfClone
