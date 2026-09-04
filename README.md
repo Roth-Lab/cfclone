@@ -5,7 +5,7 @@ A Bayesian model to perform clonal deconvolution of cfDNA given scWGS.
 
 First clone and `cd` into this repository 
 ```
-git clone -depth 1 https://github.com/RothLab/cfcfclone.git
+git clone --depth 1 https://github.com/RothLab/cfclone.git
 cd cfclone
 ```
 to install and run cfClone download [pixi](https://pixi.prefix.dev/latest/) and run the following command
