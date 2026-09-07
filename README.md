@@ -1,15 +1,22 @@
-# cfClone - an scWGS and cfDNA integrated analysis 
+# cfClone - an scWGS and cfDNA integrated analysis
+
 A Bayesian model to perform clonal deconvolution of cfDNA given scWGS.
 
 ## Getting started
 
+We have run cfClone on operating systems Mac OSX (Tahoe 26.6.2) and Ubuntu (20.04.6) no specialized hardware is required.
+cfClone has negligable installation time as it only requires Python (3.12 or higher), Julia (1.10.10), and pixi for package management.
+
 First clone and `cd` into this repository 
-```
-git clone --depth 1 https://github.com/RothLab/cfclone.git
+
+```bash
+git clone --depth 1 https://github.com/Roth-Lab/cfclone.git
 cd cfclone
 ```
+
 to install and run cfClone download [pixi](https://pixi.prefix.dev/latest/) and run the following command
-```
+
+```bash
 pixi run cfclone
 Usage: cfclone [OPTIONS] COMMAND [ARGS]...
 
@@ -39,13 +46,15 @@ The main function to perform inference is `cfclone fit` at minimum it expects
 
 2. a tsv file that contains the bin wise total and haplotype specific copy number matrix ([see](example/data/clone_cn.tsv.gz) for example)
 
-3. and a path to output inference to an h5 file.
+3. and a path to output inference to an h5 file ([see](example/results/fit.h5) for example fit).
 
 once the data files are obtained and an output path selected, inference can be performed with default values as follows:
 
 ```bash
 pixi run cfclone fit --clone-cnv-file example/data/clone_cn.tsv.gz --in-file example/data/cfdna.tsv.gz --out-file example/results/fit.h5
 ```
+
+The run time should be approximately ~9 minutes.
 
 The posterior mean and $95\%$ HDI of the tumour fraction and clone prevalences can be computed with
 
@@ -56,7 +65,7 @@ pixi run cfclone write-prevalence-stats --in-file example/results/fit.h5 --out-f
 
 where the posterior summary statistics are stored at [tumour content](example/results/tumour_content.tsv) and [clone prevalence](example/results/prevs.tsv).
 
-Additionally see [example](example/example.ipynb) for a toy example modelling ctdna with a single clone for a subset of bins.
+Additionally, see [toy example](example/example.ipynb) to model ctdna with a single clone for a subset of bins.
 
 ### Optional values for `cfclone fit`
 ___
@@ -86,8 +95,35 @@ ___
 * `--exec-dir PATH`: Directory path to write additional sampler outputs.
 * `--laplace-exec-dir PATH`: Directory path to write Laplace approximation outputs.
 
+## Data input format
 
-# License
+As briefly stated, cfClone expects two tsv files containing the cfdna data and clone copy number data.
+The cfdna data contains bin-wise read depth ratios (RDR) and haplotype count data
+and the clone data contains bin-wise clone haplotype specific copy number profiles.
+Below we show the example input data loaded into a pandas dataframe.
+
+```bash
+>>> import pandas as pd 
+>>> df_cfdna = pd.read_csv('example/data/cfdna.tsv.gz', sep='\t')
+>>> df_clone_cn = pd.read_csv('example/data/clone_cn.tsb.gz', sep='\t')
+>>> df_cfdna.head()
+  chrom    start      end       rdr     a     b
+0  chr1  1000000  1500000  0.956597  3779  1982
+1  chr1  1500000  2000000  0.980388  2180  1288
+2  chr1  2000000  2500000  0.977580  3952  2153
+3  chr1  3000000  3500000  0.949010  4642  2280
+4  chr1  3500000  4000000  0.974383  4650  2314
+>>> df_clone_cn.head()
+  chrom    start      end  clone  cn_a  cn_b
+0  chr1        0   500000      0     4     0
+1  chr1   500000  1000000      0     4     0
+2  chr1  1000000  1500000      0     4     0
+3  chr1  1500000  2000000      0     4     1
+4  chr1  2000000  2500000      0     4     0
+```
+
+## License
+
 cfClone
 Copyright (C) 2026 Matteo Lepur, Andrew Roth, Alexandre Bouchard, Emilia Hurtado
 
