@@ -105,7 +105,7 @@ Below we show the example input data loaded into a pandas dataframe.
 ```bash
 >>> import pandas as pd 
 >>> df_cfdna = pd.read_csv('example/data/cfdna.tsv.gz', sep='\t')
->>> df_clone_cn = pd.read_csv('example/data/clone_cn.tsb.gz', sep='\t')
+>>> df_clone_cn = pd.read_csv('example/data/clone_cn.tsv.gz', sep='\t')
 >>> df_cfdna.head()
   chrom    start      end       rdr     a     b
 0  chr1  1000000  1500000  0.956597  3779  1982
